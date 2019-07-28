@@ -4,6 +4,8 @@
 
 RbBCC is a port of [BCC](https://github.com/iovisor/bcc) in MRI. See iovisor project page.
 
+![Movie](examples/output.gif)
+
 This gem requires `libbcc.so`. Please install it [following BCC's instruction](https://github.com/iovisor/bcc/blob/master/INSTALL.md).
 
 ## Installation
