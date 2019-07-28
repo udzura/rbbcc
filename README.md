@@ -1,8 +1,10 @@
-# Rbbcc
+# RbBCC
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/rbbcc`. To experiment with that code, run `bin/console` for an interactive prompt.
+[![Gem Version](https://badge.fury.io/rb/rbbcc.svg)](https://badge.fury.io/rb/rbbcc)
 
-TODO: Delete this and the text above, and describe your gem
+RbBCC is a port of [BCC](https://github.com/iovisor/bcc) in MRI. See iovisor project page.
+
+This gem requires `libbcc.so`. Please install it [following BCC's instruction](https://github.com/iovisor/bcc/blob/master/INSTALL.md).
 
 ## Installation
 
@@ -22,7 +24,20 @@ Or install it yourself as:
 
 ## Usage
 
-TODO: Write usage instructions here
+```ruby
+require 'rbbcc' 
+
+code = <<CLANG
+int kprobe__sys_clone(void *ctx)
+{
+  bpf_trace_printk("Hello, World!\\n");
+  return 0;
+}
+CLANG
+RbBCC::BCC.new(text: code).trace_print
+```
+
+See examples (both in rbbcc and BCC)
 
 ## Development
 
