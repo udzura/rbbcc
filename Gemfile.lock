@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    rbbcc (0.1.0)
+    rbbcc (0.0.1.pre)
 
 GEM
   remote: https://rubygems.org/
@@ -17,4 +17,4 @@ DEPENDENCIES
   rbbcc!
 
 BUNDLED WITH
-   2.0.1
+   2.0.2
