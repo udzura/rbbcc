@@ -11,8 +11,13 @@ module RbBCC
   TRACEFS = "/sys/kernel/debug/tracing"
 
   class BCC
-    def initialize(text:, debug: 0, cflags: [], sdt_contexts: [], allow_rlimit: 0)
+    def initialize(text:, debug: 0, cflags: [], usdt_contexts: [], allow_rlimit: 0)
       @kprobe_fds = []
+      @usdt_contexts = usdt_contexts
+      if code = gen_args_from_usdt
+        text = code + text
+      end
+
       @module = Clib.bpf_module_create_c_from_string(
         text,
         debug,
@@ -27,6 +32,25 @@ module RbBCC
       end
 
       trace_autoload!
+
+      @usdt_contexts.each do |usdt|
+        Clib.bcc_usdt_foreach_uprobe(usdt.context, Clib::UsdtUprobeAttachCallback)
+      end
+    end
+
+    def gen_args_from_usdt
+      ptr = Clib.bcc_usdt_genargs(@usdt_contexts.map(&:context).pack('J*'), @usdt_contexts.size)
+      code = ""
+      if !ptr || ptr.null?
+        return nil
+      end
+
+      idx = 0
+      while ptr[idx, 1] != "\x00"
+        idx += 1
+      end
+      ptr.size = idx + 1
+      ptr.to_s
     end
 
     def load_func(func_name, prog_type)

@@ -17,10 +17,7 @@ module RbBCC
       if(ret < 0)
         raise SystemCallError.new(Fiddle.last_error)
       end
-    end
-
-    def gen_args
-      code = Clib.bcc_usdt_genargs([@context].pack('*p'), 1)
+      ret
     end
   end
 end
