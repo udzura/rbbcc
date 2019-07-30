@@ -1,6 +1,8 @@
 require 'rbbcc/clib'
 
 module RbBCC
+  USDTProbe = Struct.new(:binpath, :fn_name, :addr, :pid)
+
   class USDT
     # TODO path:
     def initialize(pid:)
@@ -18,6 +20,18 @@ module RbBCC
         raise SystemCallError.new(Fiddle.last_error)
       end
       ret
+    end
+
+    def enumerate_active_probes
+      probes = []
+      callback = Clib.bind('void _usdt_cb(char *, char *, unsigned long long, int)') do |binpath, fn_name, addr, pid|
+        probe = USDTProbe.new(Clib.__extract_char(binpath), Clib.__extract_char(fn_name), addr, pid)
+        probes << probe
+      end
+
+      Clib.bcc_usdt_foreach_uprobe(@context, callback)
+
+      return probes
     end
   end
 end
