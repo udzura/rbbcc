@@ -11,4 +11,6 @@ require "rbbcc"
 # Pry.start
 
 require "irb"
+
+include RbBCC
 IRB.start(__FILE__)

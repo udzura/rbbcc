@@ -16,5 +16,9 @@ module RbBCC
     extern 'unsigned int bpf_module_kern_version(void *)'
 
     extern 'int bpf_attach_kprobe(int, int, char *, char *, unsigned int, int)'
+
+    extern 'void * bcc_usdt_new_frompid(int, char *)'
+    extern 'int bcc_usdt_enable_probe(void *, char *, char *)'
+    extern 'char * bcc_usdt_genargs(void **, int)'
   end
 end
