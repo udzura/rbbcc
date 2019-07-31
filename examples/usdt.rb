@@ -15,11 +15,11 @@ int do_trace(struct pt_regs *ctx) {
 CLANG
 
 u = USDT.new(pid: pid.to_i)
-u.enable_probe(probe: "mruby", fn_name: "do_trace")
+u.enable_probe(probe: "ruby", fn_name: "do_trace")
 
 b = BCC.new(text: bpf_text, usdt_contexts: [u])
 
-printf("%-18s %-16s %-6s %s\n", "TIME(s)", "COMM", "PID", "mruby-probe")
+printf("%-18s %-16s %-6s %s\n", "TIME(s)", "COMM", "PID", "value")
 
 b.trace_fields do |task, pid, cpu, flags, ts, msg|
   printf("%-18.9f %-16s %-6d %s", ts, task, pid, msg)

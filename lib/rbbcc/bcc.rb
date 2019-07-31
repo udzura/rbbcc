@@ -12,8 +12,8 @@ module RbBCC
 
   class BCC
     def initialize(text:, debug: 0, cflags: [], usdt_contexts: [], allow_rlimit: 0)
-      @kprobe_fds = []
-      @uprobe_fds = []
+      @kprobe_fds = {}
+      @uprobe_fds = {}
       @usdt_contexts = usdt_contexts
       if code = gen_args_from_usdt
         text = code + text
@@ -39,6 +39,8 @@ module RbBCC
           attach_uprobe(name: probe.binpath, fn_name: probe.fn_name, addr: probe.addr, pid: probe.pid)
         end
       end
+
+      at_exit { self.cleanup }
     end
 
     def gen_args_from_usdt
@@ -83,9 +85,9 @@ module RbBCC
       if fd < 0
         raise SystemCallError.new(Fiddle.last_error)
       end
-      puts "Attach: #{event}"
-      @kprobe_fds << fd
-      fd
+      puts "Attach: #{ev_name}"
+      @kprobe_fds[ev_name] = fd
+      [ev_name, fd]
     end
 
     def attach_uprobe(name: "", sym: "", addr: nil, fn_name: "", pid: -1)
@@ -95,9 +97,10 @@ module RbBCC
       if fd < 0
         raise SystemCallError.new(Fiddle.last_error)
       end
+      puts "Attach: #{ev_name}"
 
-      @uprobe_fds << fd
-      fd
+      @uprobe_fds[ev_name] = fd
+      [ev_name, fd]
     end
 
     def tracefile
@@ -130,6 +133,9 @@ module RbBCC
 
         do_each_line.call(task, pid, cpu, flags, ts, msg)
       end
+    end
+
+    def cleanup # TBD
     end
 
     private
