@@ -11,8 +11,14 @@ module RbBCC
   TRACEFS = "/sys/kernel/debug/tracing"
 
   class BCC
-    def initialize(text:, debug: 0, cflags: [], sdt_contexts: [], allow_rlimit: 0)
-      @kprobe_fds = []
+    def initialize(text:, debug: 0, cflags: [], usdt_contexts: [], allow_rlimit: 0)
+      @kprobe_fds = {}
+      @uprobe_fds = {}
+      @usdt_contexts = usdt_contexts
+      if code = gen_args_from_usdt
+        text = code + text
+      end
+
       @module = Clib.bpf_module_create_c_from_string(
         text,
         debug,
@@ -27,6 +33,29 @@ module RbBCC
       end
 
       trace_autoload!
+
+      @usdt_contexts.each do |usdt|
+        usdt.enumerate_active_probes.each do |probe|
+          attach_uprobe(name: probe.binpath, fn_name: probe.fn_name, addr: probe.addr, pid: probe.pid)
+        end
+      end
+
+      at_exit { self.cleanup }
+    end
+
+    def gen_args_from_usdt
+      ptr = Clib.bcc_usdt_genargs(@usdt_contexts.map(&:context).pack('J*'), @usdt_contexts.size)
+      code = ""
+      if !ptr || ptr.null?
+        return nil
+      end
+
+      idx = 0
+      while ptr[idx, 1] != "\x00"
+        idx += 1
+      end
+      ptr.size = idx + 1
+      ptr.to_s
     end
 
     def load_func(func_name, prog_type)
@@ -56,8 +85,48 @@ module RbBCC
       if fd < 0
         raise SystemCallError.new(Fiddle.last_error)
       end
-      puts "Attach: #{event}"
-      @kprobe_fds << fd
+      puts "Attach: #{ev_name}"
+      @kprobe_fds[ev_name] = fd
+      [ev_name, fd]
+    end
+
+    def attach_uprobe(name: "", sym: "", addr: nil, fn_name: "", pid: -1)
+      fn = load_func(fn_name, BPF::KPROBE)
+      ev_name = to_uprobe_evname("p", name, addr, pid)
+      fd = Clib.bpf_attach_uprobe(fn[:fd], 0, ev_name, name, addr, pid)
+      if fd < 0
+        raise SystemCallError.new(Fiddle.last_error)
+      end
+      puts "Attach: #{ev_name}"
+
+      @uprobe_fds[ev_name] = fd
+      [ev_name, fd]
+    end
+
+    def detach_kprobe_event(ev_name)
+      unless @kprobe_fds.keys.include?(ev_name)
+        raise "Event #{ev_name} not registered"
+      end
+      if Clib.bpf_close_perf_event_fd(@kprobe_fds[ev_name]) < 0
+        raise SystemCallError.new(Fiddle.last_error)
+      end
+      if Clib.bpf_detach_kprobe(ev_name) < 0
+        raise SystemCallError.new(Fiddle.last_error)
+      end
+      @kprobe_fds.delete(ev_name)
+    end
+
+    def detach_uprobe_event(ev_name)
+      unless @uprobe_fds.keys.include?(ev_name)
+        raise "Event #{ev_name} not registered"
+      end
+      if Clib.bpf_close_perf_event_fd(@uprobe_fds[ev_name]) < 0
+        raise SystemCallError.new(Fiddle.last_error)
+      end
+      if Clib.bpf_detach_uprobe(ev_name) < 0
+        raise SystemCallError.new(Fiddle.last_error)
+      end
+      @uprobe_fds.delete(ev_name)
     end
 
     def tracefile
@@ -65,7 +134,7 @@ module RbBCC
     end
 
     def trace_readline
-      tracefile.readline(1024).rstrip
+      tracefile.readline(1024)
     end
 
     def trace_print(fmt: nil)
@@ -77,6 +146,32 @@ module RbBCC
         end
         puts line
         $stdout.flush
+      end
+    end
+
+    def trace_fields(&do_each_line)
+      while buf = trace_readline
+        next if buf.start_with? "CPU:"
+        task = buf[0..15].lstrip()
+        meta, _addr, msg = buf[17..-1].split(": ")
+        pid, cpu, flags, ts = meta.split(" ")
+        cpu = cpu[1..-2]
+
+        do_each_line.call(task, pid, cpu, flags, ts, msg)
+      end
+    end
+
+    def cleanup
+      @kprobe_fds.each do |k, v|
+        detach_kprobe_event(k)
+      end
+
+      @uprobe_fds.each do |k, v|
+        detach_uprobe_event(k)
+      end
+
+      if @module
+        Clib.bpf_module_destroy(@module)
       end
     end
 
@@ -114,6 +209,14 @@ module RbBCC
         end
       end
       return name
+    end
+
+    def to_uprobe_evname(prefix, path, addr, pid)
+      if pid == -1
+        return "%s_%s_0x%x" % [prefix, path.gsub(/[^_a-zA-Z0-9]/, "_"), addr]
+      else
+        return "%s_%s_0x%x_%d" % [prefix, path.gsub(/[^_a-zA-Z0-9]/, "_"), addr, pid]
+      end
     end
   end
 end
