@@ -18,6 +18,7 @@ module RbBCC
     extern 'void * bpf_module_create_c_from_string(char *, unsigned int, char **, int, long)'
     extern 'int bpf_num_functions(void *)'
     extern 'char * bpf_function_name(void *, int)'
+    extern 'void bpf_module_destroy(void *)'
 
     extern 'int bcc_func_load(void *, int, char *, void *, int, char *, unsigned int, int, char *, unsigned int)'
     extern 'void * bpf_function_start(void *, char *)'
@@ -29,6 +30,8 @@ module RbBCC
     extern 'int bpf_detach_kprobe(char *)'
     extern 'int bpf_attach_uprobe(int, int, char *, char *, unsigned long, int)'
     extern 'int bpf_detach_uprobe(char *)'
+    extern 'int bpf_open_perf_event(unsigned int, unsigned long, int, int)'
+    extern 'int bpf_close_perf_event_fd(int)'
 
     extern 'void * bcc_usdt_new_frompid(int, char *)'
     extern 'int bcc_usdt_enable_probe(void *, char *, char *)'

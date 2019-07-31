@@ -103,6 +103,32 @@ module RbBCC
       [ev_name, fd]
     end
 
+    def detach_kprobe_event(ev_name)
+      unless @kprobe_fds.keys.include?(ev_name)
+        raise "Event #{ev_name} not registered"
+      end
+      if Clib.bpf_close_perf_event_fd(@kprobe_fds[ev_name]) < 0
+        raise SystemCallError.new(Fiddle.last_error)
+      end
+      if Clib.bpf_detach_kprobe(ev_name) < 0
+        raise SystemCallError.new(Fiddle.last_error)
+      end
+      @kprobe_fds.delete(ev_name)
+    end
+
+    def detach_uprobe_event(ev_name)
+      unless @uprobe_fds.keys.include?(ev_name)
+        raise "Event #{ev_name} not registered"
+      end
+      if Clib.bpf_close_perf_event_fd(@uprobe_fds[ev_name]) < 0
+        raise SystemCallError.new(Fiddle.last_error)
+      end
+      if Clib.bpf_detach_uprobe(ev_name) < 0
+        raise SystemCallError.new(Fiddle.last_error)
+      end
+      @uprobe_fds.delete(ev_name)
+    end
+
     def tracefile
       @tracefile ||= File.open("#{TRACEFS}/trace_pipe", "rb")
     end
@@ -135,7 +161,18 @@ module RbBCC
       end
     end
 
-    def cleanup # TBD
+    def cleanup
+      @kprobe_fds.each do |k, v|
+        detach_kprobe_event(k)
+      end
+
+      @uprobe_fds.each do |k, v|
+        detach_uprobe_event(k)
+      end
+
+      if @module
+        Clib.bpf_module_destroy(@module)
+      end
     end
 
     private
