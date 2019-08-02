@@ -42,6 +42,7 @@ module RbBCC
 
       at_exit { self.cleanup }
     end
+    attr_reader :module
 
     def gen_args_from_usdt
       ptr = Clib.bcc_usdt_genargs(@usdt_contexts.map(&:context).pack('J*'), @usdt_contexts.size)
