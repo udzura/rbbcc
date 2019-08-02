@@ -1,4 +1,5 @@
 require 'rbbcc/consts'
+require 'rbbcc/symbol_cache'
 
 module RbBCC
   SYSCALL_PREFIXES = [
@@ -205,8 +206,14 @@ module RbBCC
     def fix_syscall_fnname(name)
       SYSCALL_PREFIXES.each do |prefix|
         if name.start_with?(prefix)
-          # TODO resolution from sym cache
-          return SYSCALL_PREFIXES[0] + name.sub(prefix, "")
+          real = SYSCALL_PREFIXES.find { |candidate|
+            SymbolCache.resolve_global(name.sub(prefix, candidate))
+          }
+          unless real
+            real = prefix
+          end
+
+          return name.sub(prefix, real)
         end
       end
       return name

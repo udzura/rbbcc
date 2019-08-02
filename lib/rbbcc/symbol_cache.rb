@@ -13,6 +13,10 @@ module RbBCC
         caches[pid]
       end
       alias [] cache
+
+      def resolve_global(name)
+        self[-1].resolve_name(nil, name)
+      end
     end
 
     def initialize(pid)
