@@ -37,5 +37,18 @@ module RbBCC
     extern 'int bcc_usdt_enable_probe(void *, char *, char *)'
     extern 'char * bcc_usdt_genargs(void **, int)'
     extern 'void bcc_usdt_foreach_uprobe(void *, void *)'
+
+    BCCSymbol = struct([
+                         "const char *name",
+                         "const char *demangle_name",
+                         "const char *module",
+                         "unsigned long offset"
+                 ])
+
+    extern 'void * bcc_symcache_new(int, void *)'
+    extern 'void bcc_free_symcache(void *, int)'
+    extern 'int bcc_symcache_resolve(void *, unsigned long, void *)'
+    extern 'int bcc_symcache_resolve_no_demangle(void *, unsigned long, void *)'
+    extern 'int bcc_symcache_resolve_name(void *, char *, char *, unsigned long long *)'
   end
 end
