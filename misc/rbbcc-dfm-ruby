@@ -1,0 +1,5 @@
+#!/usr/bin/env sh
+if ! mount | grep debug ; then
+  mount -t debugfs none /sys/kernel/debug
+fi
+exec ruby "$@"
