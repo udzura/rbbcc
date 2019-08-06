@@ -1,0 +1,9 @@
+# Please follow your Docker for Mac kernel build
+FROM linuxkit/kernel:4.9.184 AS ksrc
+
+FROM udzura/rbbcc:0.0.2
+
+COPY --from=ksrc /kernel-dev.tar /
+RUN tar xf kernel-dev.tar && rm -f kernel-dev.tar
+
+ENTRYPOINT ["rbbcc-dfm-ruby"]
