@@ -13,7 +13,7 @@ module RbBCC
     end
 
     extend Fiddle::Importer
-    dlload "libbcc.so.0"
+    dlload "libbcc.so.0.10.0"
 
     extern 'void * bpf_module_create_c_from_string(char *, unsigned int, char **, int, long)'
     extern 'int bpf_num_functions(void *)'
