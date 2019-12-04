@@ -1,4 +1,5 @@
 require 'rbbcc/consts'
+require 'rbbcc/table'
 require 'rbbcc/symbol_cache'
 
 module RbBCC
@@ -28,6 +29,7 @@ module RbBCC
         allow_rlimit
       )
       @funcs = {}
+      @tables = {}
 
       unless @module
         raise "BPF module not created"
@@ -175,6 +177,34 @@ module RbBCC
       if @module
         Clib.bpf_module_destroy(@module)
       end
+    end
+
+    attr_reader :tables
+    def get_table(name, keytype: nil, leaftype: nil, reducer: nil)
+      map_id = Clib.bpf_table_id(@module, name)
+      map_fd = Clib.bpf_table_fd(@module, name)
+
+      raise KeyError, "map not found" if map_fd < 0
+      unless keytype
+        key_desc = Clib.bpf_table_key_desc(@module, name)
+        raise("Failed to load BPF Table #{name} key desc") if key_desc.null?
+        keytype = "hist" # TODO
+      end
+
+      unless leaftype
+        leaf_desc = Clib.bpf_table_leaf_desc(@module, name)
+        raise("Failed to load BPF Table #{name} leaf desc") if leaf_desc.null?
+        leaftype = "hist" # TODO
+      end
+      return Table.new(self, map_id, map_fd, keytype, leaftype, name, reducer: reducer)
+    end
+
+    def [](key)
+      self.tables[key] ||= get_table(key)
+    end
+
+    def []=(key, value)
+      self.tables[key] = value
     end
 
     private

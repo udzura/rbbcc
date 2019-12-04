@@ -25,6 +25,8 @@ module RbBCC
     extern 'int bpf_function_size(void *, char *)'
     extern 'char * bpf_module_license(void *)'
     extern 'unsigned int bpf_module_kern_version(void *)'
+    extern 'int bpf_table_fd(void *, char *)'
+    extern 'int bpf_table_id(void *, char *)'
 
     extern 'int bpf_attach_kprobe(int, int, char *, char *, unsigned long, int)'
     extern 'int bpf_detach_kprobe(char *)'
