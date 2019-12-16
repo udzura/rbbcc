@@ -9,3 +9,5 @@
 /tmp/
 
 .ruby-version
+
+/examples/work/*
