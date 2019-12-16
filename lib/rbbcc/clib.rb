@@ -14,6 +14,7 @@ module RbBCC
 
     extend Fiddle::Importer
     dlload "libbcc.so.0.10.0"
+    typealias "size_t", "int"
 
     extern 'void * bpf_module_create_c_from_string(char *, unsigned int, char **, int, long)'
     extern 'int bpf_num_functions(void *)'
@@ -25,6 +26,12 @@ module RbBCC
     extern 'int bpf_function_size(void *, char *)'
     extern 'char * bpf_module_license(void *)'
     extern 'unsigned int bpf_module_kern_version(void *)'
+    extern 'int bpf_table_fd(void *, char *)'
+    extern 'int bpf_table_id(void *, char *)'
+    extern 'int bpf_table_type_id(void *, int)'
+    extern 'int bpf_table_flags_id(void *, int)'
+    extern 'char * bpf_table_key_desc(void *, char *)'
+    extern 'char * bpf_table_leaf_desc(void *, char *)'
 
     extern 'int bpf_attach_kprobe(int, int, char *, char *, unsigned long, int)'
     extern 'int bpf_detach_kprobe(char *)'
@@ -32,6 +39,10 @@ module RbBCC
     extern 'int bpf_detach_uprobe(char *)'
     extern 'int bpf_open_perf_event(unsigned int, unsigned long, int, int)'
     extern 'int bpf_close_perf_event_fd(int)'
+    extern 'int bpf_get_first_key(int, void *, int)'
+    extern 'int bpf_get_next_key(int, void *, void *)'
+    extern 'int bpf_lookup_elem(int fd, void *key, void *value)'
+    extern 'size_t bpf_table_max_entries_id(void *program, size_t id)'
 
     extern 'void * bcc_usdt_new_frompid(int, char *)'
     extern 'int bcc_usdt_enable_probe(void *, char *, char *)'
@@ -50,5 +61,11 @@ module RbBCC
     extern 'int bcc_symcache_resolve(void *, unsigned long, void *)'
     extern 'int bcc_symcache_resolve_no_demangle(void *, unsigned long, void *)'
     extern 'int bcc_symcache_resolve_name(void *, char *, char *, unsigned long long *)'
+  end
+end
+
+class Fiddle::Pointer
+  def to_extracted_char_ptr
+    RbBCC::Clib.__extract_char(self)
   end
 end
