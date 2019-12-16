@@ -115,11 +115,50 @@ module RbBCC
     end
 
     private
-    def type2ptr(type)
-      return Fiddle::Pointer.malloc(Fiddle::Importer.sizeof(type))
+    def byref(value, size=sizeof("int"))
+      pack_fmt = case sizeof
+                 when sizeof("int") ; "i!"
+                 when sizeof("long"); "l!"
+                 else               ; "Z*"
+                 end
+      ptr = Fiddle::Pointer.malloc(size)
+      ptr[0, size] = [value].pack(pack_fmt)
+      ptr
     end
   end
 
   class ArrayTable < TableBase
+    def initialize(bpf, map_id, map_fd, keytype, leaftype, name: nil)
+      super
+      @max_entries = Clib.bpf_table_max_entries_id(bpf.module, map_id)
+    end
+
+    # We now emulate the Array class of Ruby
+    def size
+      @max_entries
+    end
+    alias length size
+
+    def [](key)
+      super(normalize_key(key))
+    end
+
+    def each(&b)
+      each_value do |v|
+        b.call(v.to_bcc_value)
+      end
+    end
+
+    private
+    def normalize_key(key)
+      case key
+      when Fiddle::Pointer
+        key
+      when Integer
+        byref(key, keysize)
+      else
+        raise KeyError, "#{key.inspect} must be integer or pointor"
+      end
+    end
   end
 end

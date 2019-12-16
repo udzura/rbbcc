@@ -14,6 +14,7 @@ module RbBCC
 
     extend Fiddle::Importer
     dlload "libbcc.so.0.10.0"
+    typealias "size_t", "int"
 
     extern 'void * bpf_module_create_c_from_string(char *, unsigned int, char **, int, long)'
     extern 'int bpf_num_functions(void *)'
@@ -41,6 +42,7 @@ module RbBCC
     extern 'int bpf_get_first_key(int, void *, int)'
     extern 'int bpf_get_next_key(int, void *, void *)'
     extern 'int bpf_lookup_elem(int fd, void *key, void *value)'
+    extern 'size_t bpf_table_max_entries_id(void *program, size_t id)'
 
     extern 'void * bcc_usdt_new_frompid(int, char *)'
     extern 'int bcc_usdt_enable_probe(void *, char *, char *)'
