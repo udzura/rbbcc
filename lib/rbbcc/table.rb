@@ -1,6 +1,7 @@
 require 'rbbcc/clib'
 require 'fiddle'
 require 'enumerator'
+require 'rbbcc/disp_helper'
 
 module RbBCC
   module Table
@@ -112,6 +113,45 @@ module RbBCC
 
     def items
       enum_for(:each_pair).to_a
+    end
+
+    def print_log2_hist(val_type="value",
+                        section_header: "Bucket ptr",
+                        section_print_fn: nil,
+                        bucket_fn: nil,
+                        strip_leading_zero: false,
+                        bucket_sort_fn: nil)
+      if structured_key?
+        raise NotImplementedError
+      else
+        vals = Array.new($log2_index_max) { 0 }
+        each_pair do |k, v|
+          vals[k.to_bcc_value] = v.to_bcc_value
+        end
+        RbBCC.print_log2_hist(vals, val_type, strip_leading_zero)
+      end
+      nil
+    end
+
+    def print_linear_hist(val_type="value",
+                          section_header: "Bucket ptr",
+                          section_print_fn: nil,
+                          bucket_fn: nil,
+                          bucket_sort_fn: nil)
+      if structured_key?
+        raise NotImplementedError
+      else
+        vals = Array.new($linear_index_max) { 0 }
+        each_pair do |k, v|
+          vals[k.to_bcc_value] = v.to_bcc_value
+        end
+        RbBCC.print_linear_hist(vals, val_type)
+      end
+      nil
+    end
+
+    def structured_key?
+      false # TODO: implement me in the future
     end
 
     private
