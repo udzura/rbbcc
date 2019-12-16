@@ -26,7 +26,6 @@ module RbBCC
 
     def self.new(bpf, map_id, map_fd, keytype, leaftype, name, **kwargs)
       ttype = Clib.bpf_table_type_id(bpf.module, map_id)
-      p ttype
       case ttype
       when BPF_MAP_TYPE_HASH
       when BPF_MAP_TYPE_ARRAY
