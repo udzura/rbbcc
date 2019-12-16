@@ -1,3 +1,4 @@
+require "rbbcc/fiddle_ext"
 require "rbbcc/bcc"
 require "rbbcc/clib"
 require "rbbcc/usdt"

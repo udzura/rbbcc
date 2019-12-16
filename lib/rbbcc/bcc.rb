@@ -188,13 +188,13 @@ module RbBCC
       unless keytype
         key_desc = Clib.bpf_table_key_desc(@module, name)
         raise("Failed to load BPF Table #{name} key desc") if key_desc.null?
-        keytype = "hist" # TODO
+        keytype = eval(key_desc.to_extracted_char_ptr) # XXX: parse as JSON?
       end
 
       unless leaftype
         leaf_desc = Clib.bpf_table_leaf_desc(@module, name)
         raise("Failed to load BPF Table #{name} leaf desc") if leaf_desc.null?
-        leaftype = "hist" # TODO
+        leaftype = eval(leaf_desc.to_extracted_char_ptr)
       end
       return Table.new(self, map_id, map_fd, keytype, leaftype, name, reducer: reducer)
     end

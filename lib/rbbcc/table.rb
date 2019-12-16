@@ -1,7 +1,125 @@
+require 'rbbcc/clib'
+require 'fiddle'
+require 'enumerator'
+
 module RbBCC
-  class Table
-    def initialize(bpf, map_id, map_fd, keytype, leaftype, name, **kwargs)
-      # TODO
+  module Table
+    BPF_MAP_TYPE_HASH = 1
+    BPF_MAP_TYPE_ARRAY = 2
+    BPF_MAP_TYPE_PROG_ARRAY = 3
+    BPF_MAP_TYPE_PERF_EVENT_ARRAY = 4
+    BPF_MAP_TYPE_PERCPU_HASH = 5
+    BPF_MAP_TYPE_PERCPU_ARRAY = 6
+    BPF_MAP_TYPE_STACK_TRACE = 7
+    BPF_MAP_TYPE_CGROUP_ARRAY = 8
+    BPF_MAP_TYPE_LRU_HASH = 9
+    BPF_MAP_TYPE_LRU_PERCPU_HASH = 10
+    BPF_MAP_TYPE_LPM_TRIE = 11
+    BPF_MAP_TYPE_ARRAY_OF_MAPS = 12
+    BPF_MAP_TYPE_HASH_OF_MAPS = 13
+    BPF_MAP_TYPE_DEVMAP = 14
+    BPF_MAP_TYPE_SOCKMAP = 15
+    BPF_MAP_TYPE_CPUMAP = 16
+    BPF_MAP_TYPE_XSKMAP = 17
+    BPF_MAP_TYPE_SOCKHASH = 18
+
+    def self.new(bpf, map_id, map_fd, keytype, leaftype, name, **kwargs)
+      ttype = Clib.bpf_table_type_id(bpf.module, map_id)
+      p ttype
+      case ttype
+      when BPF_MAP_TYPE_HASH
+      when BPF_MAP_TYPE_ARRAY
+        ArrayTable.new(bpf, map_id, map_fd, keytype, leaftype)
+      else
+        raise "Unknown table type #{ttype}"
+      end
     end
+  end
+
+  class TableBase
+    include Fiddle::Importer
+    include Enumerable
+
+    def initialize(bpf, map_id, map_fd, keytype, leaftype, name: nil)
+      @bpf, @map_id, @map_fd, @keysize, @leafsize = \
+        bpf, map_id, map_fd, sizeof(keytype), sizeof(leaftype)
+      @ttype = Clib.bpf_table_type_id(self.bpf.module, self.map_id)
+      @flags = Clib.bpf_table_flags_id(self.bpf.module, self.map_id)
+      @name = name
+    end
+    attr_reader :bpf, :map_id, :map_fd, :keysize, :leafsize, :ttype, :flags, :name
+
+    def next(key)
+      next_key = Fiddle::Pointer.malloc(self.keysize)
+
+      if !key
+        res = Clib.bpf_get_first_key(self.map_fd, next_key,
+                                     next_key.size)
+      else
+        unless key.is_a?(Fiddle::Pointer)
+          raise TypeError, key.inspect
+        end
+        res = Clib.bpf_get_next_key(self.map_fd, key,
+                                    next_key)
+      end
+
+      if res < 0
+        raise StopIteration
+      end
+
+      return next_key
+    end
+
+    def [](key)
+      leaf = Fiddle::Pointer.malloc(self.leafsize)
+      res = Clib.bpf_lookup_elem(self.map_fd, key, leaf)
+      if res < 0
+        nil
+      end
+      return leaf
+    end
+
+    def fetch(key)
+      self[key] || raise(KeyError, "key not found")
+    end
+
+    # def []=(key, newvalue)
+    # end
+
+    def each_key
+      k = nil
+      keys = []
+      loop do
+        k = self.next(k)
+        keys << k
+        yield k
+      end
+      keys
+    end
+
+    def each_value
+      each_key {|key| yield(self[key]) if self[key] }
+    end
+
+    def each_pair
+      each_key {|key| yield(key, self[key]) if self[key] }
+    end
+    alias each each_pair
+
+    def values
+      enum_for(:each_value).to_a
+    end
+
+    def items
+      enum_for(:each_pair).to_a
+    end
+
+    private
+    def type2ptr(type)
+      return Fiddle::Pointer.malloc(Fiddle::Importer.sizeof(type))
+    end
+  end
+
+  class ArrayTable < TableBase
   end
 end
