@@ -67,6 +67,8 @@ module RbBCC
     #typedef void (*perf_reader_lost_cb)(void *cb_cookie, uint64_t lost);
     extern 'void * bpf_open_perf_buffer(void *raw_cb, void *lost_cb, void *cb_cookie, int pid, int cpu, int page_cnt)'
     extern 'int perf_reader_fd(void *reader)'
+    extern 'size_t bpf_perf_event_fields(void *program, const char *event)'
+    extern 'char * bpf_perf_event_field(void *program, const char *event, size_t i)'
 
     extern 'void * bcc_usdt_new_frompid(int, char *)'
     extern 'int bcc_usdt_enable_probe(void *, char *, char *)'

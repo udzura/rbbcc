@@ -219,6 +219,13 @@ module RbBCC
       @_open_key_fds = {}
     end
 
+    def event(data)
+      @event_class ||= get_event_class
+      ev = @event_class.malloc
+      Fiddle::Pointer.new(ev.to_ptr)[0, @event_class.size] = data[0, @event_class.size]
+      return ev
+    end
+
     def open_perf_buffer(page_cnt: 8, lost_cb: nil, &callback)
       if page_cnt & (page_cnt - 1) != 0
         raise "Perf buffer page_cnt must be a power of two"
@@ -230,6 +237,43 @@ module RbBCC
     end
 
     private
+    def get_event_class
+      ct_mapping = {
+        's8': 'char',
+        'u8': 'unsined char',
+        's8 *': 'char *',
+        's16': 'short',
+        'u16': 'unsigned short',
+        's32': 'int',
+        'u32': 'unsigned int',
+        's64': 'long long',
+        'u64': 'unsigned long long'
+      }
+
+      array_type = /(.+) \[([0-9]+)\]$/
+      fields = []
+      num_fields = Clib.bpf_perf_event_fields(self.bpf.module, @name)
+      num_fields.times do |i|
+        field = Clib.__extract_char(Clib.bpf_perf_event_field(self.bpf.module, @name, i))
+        field_name, field_type = *field.split('#')
+        if field_type =~ /enum .*/
+          field_type = "int" #it is indeed enum...
+        end
+        if _field_type = ct_mapping[field_type.to_sym]
+          field_type = _field_type
+        end
+
+        m = array_type.match(field_type)
+        if m
+          field_type = "#{m[1]}[#{m[2]}]"
+          fields << [field_type, field_name].join(" ")
+        else
+          fields << [field_type, field_name].join(" ")
+        end
+      end
+      Fiddle::Importer.struct(fields)
+    end
+
     def _open_perf_buffer(cpu, callback, page_cnt, lost_cb)
       # bind("void raw_cb_callback(void *, void *, int)")
       fn = Fiddle::Closure::BlockCaller.new(
