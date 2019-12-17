@@ -215,6 +215,23 @@ module RbBCC
       Clib.perf_reader_poll(readers.size, pack, timeout)
     end
 
+    def ksymname(name)
+      SymbolCache.resolve_global(name)
+    end
+
+    def get_syscall_prefix
+      SYSCALL_PREFIXES.each do |prefix|
+        if ksymname("%sbpf" % prefix)
+          return prefix
+        end
+      end
+      SYSCALL_PREFIXES[0]
+    end
+
+    def get_syscall_fnname(name)
+      get_syscall_prefix + name
+    end
+
     private
     def trace_autoload!
       (0..Clib.bpf_num_functions(@module)).each do |i|
