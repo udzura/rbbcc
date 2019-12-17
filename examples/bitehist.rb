@@ -31,6 +31,7 @@ loop do
   begin
     sleep 0.1
   rescue Interrupt
+    puts
     break
   end
 end
