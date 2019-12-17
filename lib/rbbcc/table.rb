@@ -271,7 +271,17 @@ module RbBCC
           fields << [field_type, field_name].join(" ")
         end
       end
-      Fiddle::Importer.struct(fields)
+      klass = Fiddle::Importer.struct(fields)
+      if fields.find {|f| f =~ /^char\[(\d+)\] ([_a-zA-Z0-9]+)/ }
+        size = $1
+        m = Module.new do
+          define_method $2 do
+            super().pack("c#{size}").sub(/\0+$/, "")
+          end
+        end
+        klass.prepend m
+      end
+      klass
     end
 
     def _open_perf_buffer(cpu, callback, page_cnt, lost_cb)

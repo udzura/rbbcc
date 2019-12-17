@@ -48,7 +48,8 @@ print_event = lambda { |cpu, data, size|
   end
 
   time_s = ((event.ts - start).to_f) / 1000000000
-  puts("%-18.9f %-16s %-6d %s" % [time_s, event.comm.pack("c*").strip, event.pid,
+  # event.comm.pack("c*").sprit
+  puts("%-18.9f %-16s %-6d %s" % [time_s, event.comm, event.pid,
                                   "Hello, perf_output!"])
 }
 
