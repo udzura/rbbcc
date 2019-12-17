@@ -2,6 +2,7 @@ require 'rbbcc/clib'
 require 'fiddle'
 require 'enumerator'
 require 'rbbcc/disp_helper'
+require 'rbbcc/cpu_helper'
 
 module RbBCC
   module Table
@@ -40,6 +41,7 @@ module RbBCC
 
   class TableBase
     include Fiddle::Importer
+    include CPUHelper
     include Enumerable
 
     def initialize(bpf, map_id, map_fd, keytype, leaftype, name: nil)
@@ -85,8 +87,13 @@ module RbBCC
       self[key] || raise(KeyError, "key not found")
     end
 
-    # def []=(key, newvalue)
-    # end
+    def []=(key, leaf)
+      res = Clib.bpf_update_elem(self.map_fd, key, leaf, 0)
+      if res < 0
+        raise SystemCallError.new("Could not update table", Fiddle.last_error)
+      end
+      res
+    end
 
     def each_key
       k = nil
@@ -157,7 +164,7 @@ module RbBCC
 
     private
     def byref(value, size=sizeof("int"))
-      pack_fmt = case sizeof
+      pack_fmt = case size
                  when sizeof("int") ; "i!"
                  when sizeof("long"); "l!"
                  else               ; "Z*"
@@ -204,5 +211,65 @@ module RbBCC
   end
 
   class PerfEventArray < TableBase
+    def initialize(bpf, map_id, map_fd, keytype, leaftype, name: nil)
+      super
+      @open_key_fds = {}
+      @event_class = nil
+      @_cbs = {}
+      @_open_key_fds = {}
+    end
+
+    def open_perf_buffer(page_cnt: 8, lost_cb: nil, &callback)
+      if page_cnt & (page_cnt - 1) != 0
+        raise "Perf buffer page_cnt must be a power of two"
+      end
+
+      get_online_cpus.each do |i|
+        _open_perf_buffer(i, callback, page_cnt, lost_cb)
+      end
+    end
+
+    private
+    def _open_perf_buffer(cpu, callback, page_cnt, lost_cb)
+      # bind("void raw_cb_callback(void *, void *, int)")
+      fn = Fiddle::Closure::BlockCaller.new(
+        Fiddle::TYPE_VOID,
+        [Fiddle::TYPE_VOIDP, Fiddle::TYPE_VOIDP, Fiddle::TYPE_INT]
+      ) do |_dummy, data, size|
+        begin
+          callback.call(cpu, data, size)
+        rescue => e
+          if Fiddle.last_error == 32 # EPIPE
+            exit
+          else
+            raise e
+          end
+        end
+      end
+      lost_fn = Fiddle::Closure::BlockCaller.new(
+        Fiddle::TYPE_VOID,
+        [Fiddle::TYPE_VOIDP, Fiddle::TYPE_ULONG]
+      ) do |_dummy, lost|
+        begin
+          lost_cb(lost)
+        rescue => e
+          if Fiddle.last_error == 32 # EPIPE
+            exit
+          else
+            raise e
+          end
+        end
+      end if lost_cb
+      reader = Clib.bpf_open_perf_buffer(fn, lost_fn, nil, -1, cpu, page_cnt)
+      if !reader || reader.null?
+        raise "Could not open perf buffer"
+      end
+      fd = Clib.perf_reader_fd(reader)
+
+      self[byref(cpu, @keysize)] = byref(fd, @leafsize)
+      self.bpf.perf_buffers[[object_id, cpu]] = reader
+      @_cbs[cpu] = [fn, lost_fn]
+      @_open_key_fds[cpu] = -1
+    end
   end
 end

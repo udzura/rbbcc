@@ -30,6 +30,7 @@ module RbBCC
       )
       @funcs = {}
       @tables = {}
+      @perf_buffers = {}
 
       unless @module
         raise "BPF module not created"
@@ -45,7 +46,7 @@ module RbBCC
 
       at_exit { self.cleanup }
     end
-    attr_reader :module
+    attr_reader :module, :perf_buffers
 
     def gen_args_from_usdt
       ptr = Clib.bcc_usdt_genargs(@usdt_contexts.map(&:context).pack('J*'), @usdt_contexts.size)
@@ -205,6 +206,13 @@ module RbBCC
 
     def []=(key, value)
       self.tables[key] = value
+    end
+
+    def perf_buffer_poll(timeout=-1)
+      readers = self.perf_buffers.values
+      readers.each {|r| r.size = Clib::PerfReader.size }
+      pack = readers.map{|r| r[0, Clib::PerfReader.size] }.pack('p*')
+      Clib.perf_reader_poll(readers.size, pack, timeout)
     end
 
     private
