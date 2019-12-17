@@ -30,6 +30,8 @@ module RbBCC
       when BPF_MAP_TYPE_HASH
       when BPF_MAP_TYPE_ARRAY
         ArrayTable.new(bpf, map_id, map_fd, keytype, leaftype)
+      when BPF_MAP_TYPE_PERF_EVENT_ARRAY
+        PerfEventArray.new(bpf, map_id, map_fd, keytype, leaftype, name: name)
       else
         raise "Unknown table type #{ttype}"
       end
@@ -199,5 +201,8 @@ module RbBCC
         raise KeyError, "#{key.inspect} must be integer or pointor"
       end
     end
+  end
+
+  class PerfEventArray < TableBase
   end
 end
