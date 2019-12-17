@@ -32,6 +32,7 @@ module RbBCC
     extern 'int bpf_table_flags_id(void *, int)'
     extern 'char * bpf_table_key_desc(void *, char *)'
     extern 'char * bpf_table_leaf_desc(void *, char *)'
+    extern 'int bpf_update_elem(int fd, void *key, void *value, unsigned long long flags)'
 
     extern 'int bpf_attach_kprobe(int, int, char *, char *, unsigned long, int)'
     extern 'int bpf_detach_kprobe(char *)'
@@ -43,6 +44,31 @@ module RbBCC
     extern 'int bpf_get_next_key(int, void *, void *)'
     extern 'int bpf_lookup_elem(int fd, void *key, void *value)'
     extern 'size_t bpf_table_max_entries_id(void *program, size_t id)'
+
+    # FIXME: This size of struct will change in future version
+    # and no struct member info in header. This is hacky
+    PerfReader = struct(
+      [
+        "void * raw_cb",
+        "void * lost_cb",
+        "void * cb_cookie",
+        "void * buf",
+        "int buf_size",
+        "void * base",
+        "int rb_use_state",
+        "int rb_read_tid",
+        "int page_size",
+        "int page_cnt",
+        "int fd"
+      ]
+    )
+
+    #typedef void (*perf_reader_raw_cb)(void *cb_cookie, void *raw, int raw_size);
+    #typedef void (*perf_reader_lost_cb)(void *cb_cookie, uint64_t lost);
+    extern 'void * bpf_open_perf_buffer(void *raw_cb, void *lost_cb, void *cb_cookie, int pid, int cpu, int page_cnt)'
+    extern 'int perf_reader_fd(void *reader)'
+    extern 'size_t bpf_perf_event_fields(void *program, const char *event)'
+    extern 'char * bpf_perf_event_field(void *program, const char *event, size_t i)'
 
     extern 'void * bcc_usdt_new_frompid(int, char *)'
     extern 'int bcc_usdt_enable_probe(void *, char *, char *)'
@@ -61,6 +87,8 @@ module RbBCC
     extern 'int bcc_symcache_resolve(void *, unsigned long, void *)'
     extern 'int bcc_symcache_resolve_no_demangle(void *, unsigned long, void *)'
     extern 'int bcc_symcache_resolve_name(void *, char *, char *, unsigned long long *)'
+
+    extern 'int perf_reader_poll(int num_readers, struct perf_reader **readers, int timeout)'
   end
 end
 
