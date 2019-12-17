@@ -33,7 +33,6 @@ int hello(struct pt_regs *ctx) {
 
 # load BPF program
 b = BCC.new(text: prog)
-puts b.get_syscall_fnname("clone")
 b.attach_kprobe(event: b.get_syscall_fnname("clone"), fn_name: "hello")
 
 # header
