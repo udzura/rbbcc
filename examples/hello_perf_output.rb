@@ -33,8 +33,7 @@ int hello(struct pt_regs *ctx) {
 
 # load BPF program
 b = BCC.new(text: prog)
-# b.get_syscall_fnname("clone") => "__x64_sys_clone"
-b.attach_kprobe(event: "__x64_sys_clone", fn_name: "hello")
+b.attach_kprobe(event: b.get_syscall_fnname("clone"), fn_name: "hello")
 
 # header
 puts("%-18s %-16s %-6s %s" % ["TIME(s)", "COMM", "PID", "MESSAGE"])
