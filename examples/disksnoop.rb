@@ -6,7 +6,6 @@
 #
 # Written as a basic example of tracing latency.
 #
-# Copyright (c) 2015 Brendan Gregg.
 # Licensed under the Apache License, Version 2.0 (the "License")
 #
 # 11-Aug-2015	Brendan Gregg	Created disksnoop.py
