@@ -13,6 +13,72 @@ module RbBCC
   TRACEFS = "/sys/kernel/debug/tracing"
 
   class BCC
+    class << self
+      def get_kprobe_functions(event_re)
+        blacklist = []
+        fns = []
+        File.open(File.expand_path("../kprobes/blacklist", TRACEFS), "rb") do |blacklist_f|
+          blacklist = blacklist_f.each_line.map { |line|
+            line.rstrip.split[1]
+          }.uniq
+        end
+        in_init_section = 0
+        in_irq_section = 0
+        File.open("/proc/kallsyms", "rb") do |avail_file|
+          avail_file.each_line do |line|
+            t, fn = line.rstrip.split[1,2]
+            # Skip all functions defined between __init_begin and
+            # __init_end
+            if in_init_section == 0
+              if fn == '__init_begin'
+                in_init_section = 1
+                next
+              elsif in_init_section == 1
+                if fn == '__init_end'
+                  in_init_section = 2
+                  next
+                end
+              end
+              # Skip all functions defined between __irqentry_text_start and
+              # __irqentry_text_end
+              if in_irq_section == 0
+                if fn == '__irqentry_text_start'
+                  in_irq_section = 1
+                  next
+                elsif in_irq_section == 1
+                  if fn == '__irqentry_text_end'
+                    in_irq_section = 2
+                    next
+                  end
+                end
+              end
+              # All functions defined as NOKPROBE_SYMBOL() start with the
+              # prefix _kbl_addr_*, blacklisting them by looking at the name
+              # allows to catch also those symbols that are defined in kernel
+              # modules.
+              if fn.start_with?('_kbl_addr_')
+                next
+              # Explicitly blacklist perf-related functions, they are all
+              # non-attachable.
+              elsif fn.start_with?('__perf') || fn.start_with?('perf_')
+                next
+              # Exclude all gcc 8's extra .cold functions
+              elsif fn =~ /^.*\.cold\.\d+$/
+                next
+              end
+              if %w(t w).include?(t.downcase) \
+                 && /#{event_re}/ =~ fn \
+                 && !blacklist.include?(fn)
+                fns << fn
+              end
+            end
+          end
+        end
+        fns = fns.uniq
+        return fns.empty? ? nil : fns
+      end
+    end
+
     def initialize(text:, debug: 0, cflags: [], usdt_contexts: [], allow_rlimit: 0)
       @kprobe_fds = {}
       @uprobe_fds = {}
@@ -155,6 +221,7 @@ module RbBCC
     end
 
     def trace_fields(&do_each_line)
+      ret = []
       while buf = trace_readline
         next if buf.start_with? "CPU:"
         task = buf[0..15].lstrip()
@@ -162,8 +229,14 @@ module RbBCC
         pid, cpu, flags, ts = meta.split(" ")
         cpu = cpu[1..-2]
 
-        do_each_line.call(task, pid, cpu, flags, ts, msg)
+        if do_each_line
+          do_each_line.call(task, pid, cpu, flags, ts, msg)
+        else
+          ret = [task, pid, cpu, flags, ts, msg]
+          break
+        end
       end
+      ret
     end
 
     def cleanup
