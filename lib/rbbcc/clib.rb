@@ -81,14 +81,32 @@ module RbBCC
                          "const char *module",
                          "unsigned long offset"
                  ])
-
+    BCCSymbolOption = struct([
+                               'int use_debug_file',
+                               'int check_debug_file_crc',
+                               'unsigned int use_symbol_type'
+                             ])
+    BCCIPOffsetUnion = union(['unsigned long long offset', 'unsigned long long ip'])
+    BCCStacktraceBuildID = \
+      struct([
+               'unsigned int status',
+               'unsigned char[20] build_id',
+               'unsigned long long u' # truly union
+             ])
+    extern 'int bcc_resolve_symname(char *module, char *symname,
+                        unsigned long long addr, int pid,
+                        struct bcc_symbol_option* option,
+                        struct bcc_symbol *sym)'
     extern 'void * bcc_symcache_new(int, void *)'
     extern 'void bcc_free_symcache(void *, int)'
     extern 'int bcc_symcache_resolve(void *, unsigned long, void *)'
     extern 'int bcc_symcache_resolve_no_demangle(void *, unsigned long, void *)'
     extern 'int bcc_symcache_resolve_name(void *, char *, char *, unsigned long long *)'
+    extern 'void bcc_symbol_free_demangle_name(struct bcc_symbol *sym)'
 
     extern 'int perf_reader_poll(int num_readers, struct perf_reader **readers, int timeout)'
+
+    extern 'void bcc_procutils_free(const char *ptr)'
   end
 end
 

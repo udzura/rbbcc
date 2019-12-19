@@ -29,10 +29,13 @@ module RbBCC
       ttype = Clib.bpf_table_type_id(bpf.module, map_id)
       case ttype
       when BPF_MAP_TYPE_HASH
+        HashTable.new(bpf, map_id, map_fd, keytype, leaftype)
       when BPF_MAP_TYPE_ARRAY
         ArrayTable.new(bpf, map_id, map_fd, keytype, leaftype)
       when BPF_MAP_TYPE_PERF_EVENT_ARRAY
         PerfEventArray.new(bpf, map_id, map_fd, keytype, leaftype, name: name)
+      when BPF_MAP_TYPE_STACK_TRACE
+        StackTrace.new(bpf, map_id, map_fd, keytype, leaftype)
       else
         raise "Unknown table type #{ttype}"
       end
@@ -46,12 +49,13 @@ module RbBCC
 
     def initialize(bpf, map_id, map_fd, keytype, leaftype, name: nil)
       @bpf, @map_id, @map_fd, @keysize, @leafsize = \
-        bpf, map_id, map_fd, sizeof(keytype), sizeof(leaftype)
+                                        bpf, map_id, map_fd, sizeof(keytype), sizeof(leaftype)
+      @leaftype = leaftype
       @ttype = Clib.bpf_table_type_id(self.bpf.module, self.map_id)
       @flags = Clib.bpf_table_flags_id(self.bpf.module, self.map_id)
       @name = name
     end
-    attr_reader :bpf, :map_id, :map_fd, :keysize, :leafsize, :ttype, :flags, :name
+    attr_reader :bpf, :map_id, :map_fd, :keysize, :leafsize, :leaftype, :ttype, :flags, :name
 
     def next(key)
       next_key = Fiddle::Pointer.malloc(self.keysize)
@@ -173,6 +177,9 @@ module RbBCC
       ptr[0, size] = [value].pack(pack_fmt)
       ptr
     end
+  end
+
+  class HashTable < TableBase
   end
 
   class ArrayTable < TableBase
@@ -324,6 +331,35 @@ module RbBCC
       self.bpf.perf_buffers[[object_id, cpu]] = reader
       @_cbs[cpu] = [fn, lost_fn]
       @_open_key_fds[cpu] = -1
+    end
+  end
+
+  class StackTrace < TableBase
+    MAX_DEPTH = 127
+    BPF_F_STACK_BUILD_ID = (1<<5)
+    BPF_STACK_BUILD_ID_EMPTY =  0 #can't get stacktrace
+    BPF_STACK_BUILD_ID_VALID = 1 #valid build-id,ip
+    BPF_STACK_BUILD_ID_IP = 2 #fallback to ip
+
+    def get_stack(stack_id)
+      key = stack_id.is_a?(Fiddle::Pointer) ? stack_id : byref(stack_id, @keysize)
+      leaftype.new(self[stack_id])
+    end
+
+    def walk(stack_id, resolve: nil, &blk)
+      addrs = if (flags & BPF_F_STACK_BUILD_ID).nonzero?
+                get_stack(stack_id).trace[0..MAX_DEPTH]
+              else
+                get_stack(stack_id).ip[0..MAX_DEPTH]
+              end
+      addrs.each do |addr|
+        break if addr.zero?
+        if resolve
+          blk.call(resolve.call(addr))
+        else
+          blk.call(addr)
+        end
+      end
     end
   end
 end
