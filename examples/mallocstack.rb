@@ -58,7 +58,6 @@ stack_traces = b.get_table("stack_traces")
 calls.items.sort_by{|k, v| v.to_bcc_value }.reverse.each do |(k, v)|
   puts("%d bytes allocated at:" % v.to_bcc_value)
   stack_traces.walk(k) do |addr|
-    require 'pry'; binding.pry
     puts("\t%s" % BCC.sym(addr, pid, show_offset: true))
   end
 end
