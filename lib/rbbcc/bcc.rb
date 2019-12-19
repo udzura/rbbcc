@@ -89,6 +89,64 @@ module RbBCC
         Clib.bcc_procutils_free(sym.module)
         return module_path, sym.offset
       end
+
+      def decode_table_type(desc)
+        return desc if desc.is_a?(String)
+
+        anon = []
+        fields = []
+        # e.g. ["bpf_stacktrace", [["ip", "unsigned long long", [127]]], "struct_packed"]
+        name, typedefs, data_type = desc
+        typedefs.each do |field|
+          case field.size
+          when 2
+            fields << "#{decode_table_type(field[1])} #{field[0]}"
+          when 3
+            ftype = field.last
+            if ftype.is_a?(Array)
+              fields << "#{decode_table_type(field[1])}[#{ftype[0]}] #{field[0]}"
+            elsif ftype.is_a?(Integer)
+              warn("Warning: Ruby fiddle does not support bitfield member, ignoring")
+              warn("Adding member `#{field[1]} #{field[0]}:#{ftype}'")
+              fields << "#{decode_table_type(field[1])} #{field[0]}"
+            elsif %w(union struct struct_packed).in?(ftype)
+              name = field[0]
+              if name.empty?
+                name = "__anon%d" % anon.size
+                anon << name
+              end
+              # FIXME: nested struct
+              fields << "#{decode_table_type(field)} #{name}"
+            else
+              raise("Failed to decode type #{field.inspect}")
+            end
+          else
+            raise("Failed to decode type #{field.inspect}")
+          end
+        end
+        if data_type == "union"
+          return Fiddle::Importer.union(fields)
+        else
+          return Fiddle::Importer.struct(fields)
+        end
+      end
+
+      def sym(addr, pid, show_module: false, show_offset: false, demangle: true)
+        # FIXME: case of typeofaddr.find('bpf_stack_build_id')
+        #s = Clib::BCCSymbol.malloc
+        #b = Clib::BCCStacktraceBuildID.malloc
+        #b.status = addr.status
+        #b.build_id = addr.build_id
+        #b.u = addr.offset
+        #Clib.bcc_buildsymcache_resolve(BPF.bsymcache, b, s)
+
+        name, offset_, module_ = SymbolCache.cache(pid).resolve(addr, demangle)
+        offset = (show_offset && name) ? ("+0x%x" % offset_) : ""
+        name = name || "[unknown]"
+        name = name + offset
+        module_ = (show_module && module_) ? " [#{File.basename.basename(module_)}]" : ""
+        return name + module_
+      end
     end
 
     def initialize(text:, debug: 0, cflags: [], usdt_contexts: [], allow_rlimit: 0)
@@ -178,7 +236,6 @@ module RbBCC
 
       fn = load_func(fn_name, BPF::KPROBE)
       ev_name = to_uprobe_evname("p", path, addr, pid)
-      # require 'pry'; binding.pry
       fd = Clib.bpf_attach_uprobe(fn[:fd], 0, ev_name, path, addr, pid)
       if fd < 0
         raise SystemCallError.new(Fiddle.last_error)
@@ -277,13 +334,14 @@ module RbBCC
       unless keytype
         key_desc = Clib.bpf_table_key_desc(@module, name)
         raise("Failed to load BPF Table #{name} key desc") if key_desc.null?
-        keytype = eval(key_desc.to_extracted_char_ptr) # XXX: parse as JSON?
+        keytype = BCC.decode_table_type(eval(key_desc.to_extracted_char_ptr))
       end
 
       unless leaftype
         leaf_desc = Clib.bpf_table_leaf_desc(@module, name)
         raise("Failed to load BPF Table #{name} leaf desc") if leaf_desc.null?
-        leaftype = eval(leaf_desc.to_extracted_char_ptr)
+
+        leaftype = BCC.decode_table_type(eval(leaf_desc.to_extracted_char_ptr))
       end
       return Table.new(self, map_id, map_fd, keytype, leaftype, name, reducer: reducer)
     end

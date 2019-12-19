@@ -24,21 +24,21 @@ module RbBCC
     end
 
     def resolve(addr, demangle)
-      sym = Clib::BCCSymcache.malloc
+      sym = Clib::BCCSymbol.malloc
       ret = if demangle
               Clib.bcc_symcache_resolve(@cache, addr, sym)
             else
               Clib.bcc_symcache_resolve_no_demangle(@cache, addr, sym)
             end
-      if res < 0
+      if ret < 0
         return [nil, addr, nil]
       end
 
       if demangle
-        name_res = sym.demangle_name
-        # Clib.bcc_symbol_free_demangle_name(sym)
+        name_res = Clib.__extract_char(sym.demangle_name)
+        Clib.bcc_symbol_free_demangle_name(sym)
       else
-        name_res = sym.name
+        name_res = Clib.__extract_char(sym.name)
       end
 
       return [name_res, sym.offset, Clib.__extract_char(sym.module)]
