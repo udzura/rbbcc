@@ -77,6 +77,18 @@ module RbBCC
         fns = fns.uniq
         return fns.empty? ? nil : fns
       end
+
+      def check_path_symbol(module_, symname, addr, pid)
+        sym = Clib::BCCSymbol.malloc
+        c_pid = pid == -1 ? 0 : pid
+        if Clib.bcc_resolve_symname(module_, symname, (addr || 0x0), c_pid, nil, sym) < 0
+          raise("could not determine address of symbol %s" % symname)
+        end
+        module_path = Clib.__extract_char sym.module
+        # XXX: need to free char* in ruby ffi?
+        Clib.bcc_procutils_free(sym.module)
+        return module_path, sym.offset
+      end
     end
 
     def initialize(text:, debug: 0, cflags: [], usdt_contexts: [], allow_rlimit: 0)
@@ -162,9 +174,12 @@ module RbBCC
     end
 
     def attach_uprobe(name: "", sym: "", addr: nil, fn_name: "", pid: -1)
+      path, addr = BCC.check_path_symbol(name, sym, addr, pid)
+
       fn = load_func(fn_name, BPF::KPROBE)
-      ev_name = to_uprobe_evname("p", name, addr, pid)
-      fd = Clib.bpf_attach_uprobe(fn[:fd], 0, ev_name, name, addr, pid)
+      ev_name = to_uprobe_evname("p", path, addr, pid)
+      # require 'pry'; binding.pry
+      fd = Clib.bpf_attach_uprobe(fn[:fd], 0, ev_name, path, addr, pid)
       if fd < 0
         raise SystemCallError.new(Fiddle.last_error)
       end
