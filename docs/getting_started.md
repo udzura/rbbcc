@@ -97,7 +97,7 @@ These lines are displayed by a kernel hook of `clone(2)(internally: sys_clone)` 
 
 Then, change the Ruby(and internal C) codes into this like:
 
-```console
+```ruby
 #!/usr/bin/env ruby
 
 require 'rbbcc'
