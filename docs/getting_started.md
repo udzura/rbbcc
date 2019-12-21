@@ -149,4 +149,6 @@ TIME(s)            COMM             value
 
 ----
 
-For more use case and information. Please see `example` directory and BCC's official document.
+For more use case and information. Please see [`examples`](../examples/) directory and (especially for C API) BCC's official document.
+
+* [bcc Reference Guide](https://github.com/iovisor/bcc/blob/master/docs/reference_guide.md)
