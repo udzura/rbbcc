@@ -246,6 +246,21 @@ module RbBCC
       [ev_name, fd]
     end
 
+    def attach_uretprobe(name: "", sym: "", addr: nil, fn_name: "", pid: -1)
+      path, addr = BCC.check_path_symbol(name, sym, addr, pid)
+
+      fn = load_func(fn_name, BPF::KPROBE)
+      ev_name = to_uprobe_evname("r", path, addr, pid)
+      fd = Clib.bpf_attach_uprobe(fn[:fd], 1, ev_name, path, addr, pid)
+      if fd < 0
+        raise SystemCallError.new(Fiddle.last_error)
+      end
+      puts "Attach: #{ev_name}"
+
+      @uprobe_fds[ev_name] = fd
+      [ev_name, fd]
+    end
+
     def detach_kprobe_event(ev_name)
       unless @kprobe_fds.keys.include?(ev_name)
         raise "Event #{ev_name} not registered"
@@ -297,7 +312,7 @@ module RbBCC
       while buf = trace_readline
         next if buf.start_with? "CPU:"
         task = buf[0..15].lstrip()
-        meta, _addr, msg = buf[17..-1].split(": ")
+        meta, _addr, msg = buf[17..-1].split(": ", 3)
         pid, cpu, flags, ts = meta.split(" ")
         cpu = cpu[1..-2]
 
