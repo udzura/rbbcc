@@ -250,7 +250,7 @@ module RbBCC
       path, addr = BCC.check_path_symbol(name, sym, addr, pid)
 
       fn = load_func(fn_name, BPF::KPROBE)
-      ev_name = to_uprobe_evname("p", path, addr, pid)
+      ev_name = to_uprobe_evname("r", path, addr, pid)
       fd = Clib.bpf_attach_uprobe(fn[:fd], 1, ev_name, path, addr, pid)
       if fd < 0
         raise SystemCallError.new(Fiddle.last_error)
