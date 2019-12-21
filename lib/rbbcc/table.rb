@@ -279,11 +279,15 @@ module RbBCC
         end
       end
       klass = Fiddle::Importer.struct(fields)
-      if fields.find {|f| f =~ /^char\[(\d+)\] ([_a-zA-Z0-9]+)/ }
-        size = $1
+      char_ps = fields.select {|f| f =~ /^char\[(\d+)\] ([_a-zA-Z0-9]+)/ }
+      char_ps.each do |char_p|
+        md = /^char\[(\d+)\] ([_a-zA-Z0-9]+)/.match(char_p)
         m = Module.new do
-          define_method $2 do
-            super().pack("c#{size}").sub(/\0+$/, "")
+          define_method md[2] do
+            # Split the char[] in the place where the first \0 appears
+            raw = super()
+            raw = raw[0...raw.index(0)] if raw.index(0)
+            raw.pack("c*")
           end
         end
         klass.prepend m

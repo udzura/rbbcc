@@ -191,12 +191,7 @@ module RbBCC
         return nil
       end
 
-      idx = 0
-      while ptr[idx, 1] != "\x00"
-        idx += 1
-      end
-      ptr.size = idx + 1
-      ptr.to_s
+      Clib.__extract_char ptr
     end
 
     def load_func(func_name, prog_type)
