@@ -160,7 +160,18 @@ CLANG
 EVENT_ARG = 0
 EVENT_RET = 1
 
+# This is best-effort PPID matching. Short-lived processes may exit
+# before we get a chance to read the PPID.
+# This is a fallback for when fetching the PPID from task->real_parent->tgip
+# returns 0, which happens in some kernel versions.
 def get_ppid(pid)
+  line = File.read("/proc/%d/status" % pid).lines.grep(/^PPid:/)
+  if line.empty?
+    0
+  else
+    line[0].split[1].to_i
+  end
+rescue
   0
 end
 
@@ -198,6 +209,7 @@ b["events"].open_perf_buffer do |cpu, data, size|
     unless skip
       ppid_ = event.ppid > 0 ? event.ppid : get_ppid(event.pid)
       ppid = ppid_ > 0 ? ppid_.to_s : "?"
+      # FIXME: get empty argv[pid] in some cases...
       argv_text = argv[event.pid].join(' ').gsub(/\n/, '\\n') rescue ""
       printf("%-8.3f", (Time.now.to_f - start_ts)) if args.timestamp
       printf("%-16s %-6d %-6s %3d %s\n",
