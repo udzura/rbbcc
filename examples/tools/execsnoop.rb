@@ -120,17 +120,51 @@ CLANG
 EVENT_ARG = 0
 EVENT_RET = 1
 
-bpf_text.sub!("MAXARG", "64")
+def get_ppid(pid)
+  0
+end
+
+bpf_text.sub!("MAXARG", "20")
 b = BCC.new(text: bpf_text)
 execve_fnname = b.get_syscall_fnname("execve")
 b.attach_kprobe(event: execve_fnname, fn_name: "syscall__execve")
 b.attach_kretprobe(event: execve_fnname, fn_name: "do_ret_sys_execve")
 
+printf("%-16s %-6s %-6s %3s %s\n", "PCOMM", "PID", "PPID", "RET", "ARGS")
+
+start_ts = Time.now
+argv = []
+
 b["events"].open_perf_buffer do |cpu, data, size|
   event = b["events"].event(data)
-  p [event.pid, event.ppid, %w(EVENT_ARG EVENT_TYPE)[event.type], event.argv, event.retval]
+  skip = false
+  if event.type == EVENT_ARG
+    argv[event.pid] ||= []
+    argv[event.pid] << event.argv
+  elsif event.type == EVENT_RET
+    # skip = true if event.retval != 0 && !args.fails
+    # skip = true if args.name && /#{args.name}/ !~ event.comm
+    # skip = true if args.line && /#{args.line}/ !~ argv[event.pid].join(' ')
+    # if args.quote
+    #   argv[event.pid] = argv[event.pid].map{|arg| '"' + arg.gsub(/\"/, '\\"') + '"' }
+    # end
+
+    unless skip
+      ppid_ = event.ppid > 0 ? event.ppid : get_ppid(event.pid)
+      ppid = ppid_ > 0 ? ppid_.to_s : "?"
+      argv_text = argv[event.pid].join(' ').gsub(/\n/, '\\n')
+      printf("%-16s %-6d %-6s %3d %s\n",
+             event.comm, event.pid, ppid, event.retval, argv_text)
+    end
+
+    argv[event.pid] = nil
+  end
 end
 
 loop do
-  b.perf_buffer_poll()
+  begin
+    b.perf_buffer_poll()
+  rescue Interrupt
+    exit
+  end
 end
