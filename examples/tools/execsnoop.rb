@@ -16,8 +16,48 @@
 #
 # 07-Feb-2016   Brendan Gregg   Created execsnoop.py.
 
+require 'optparse'
+require 'ostruct'
 require 'rbbcc'
 include RbBCC
+
+examples = <<USAGE
+examples:
+    ./execsnoop.rb           # trace all exec() syscalls
+    ./execsnoop.rb -x        # include failed exec()s
+    ./execsnoop.rb -t        # include timestamps
+    ./execsnoop.rb -q        # add "quotemarks" around arguments
+    ./execsnoop.rb -n main   # only print command lines containing "main"
+    ./execsnoop.rb -l tpkg   # only print command where arguments contains "tpkg"
+USAGE
+
+args = OpenStruct.new
+parser = OptionParser.new
+parser.banner = <<BANNER
+usage: execsnoop.rb [-h] [-t] [-x] [-q] [-n NAME] [-l LINE]
+                    [--max-args MAX_ARGS]
+
+Trace exec() syscalls
+
+optional arguments:
+BANNER
+parser.on("-t", "--timestamp", "include timestamp on output") {|v| args.timestamp = v }
+parser.on("-x", "--fails",     "include failed exec()s") {|v| args.fails = v }
+parser.on("-q", "--quote",     "Add quotemarks (\") around arguments.") {|v| args.quote = v }
+parser.on("-n", "--name NAME", "only print commands matching this name (regex), any arg") {|v| args.name = v }
+parser.on("-l", "--line LINE", "only print commands where arg contains this line (regex)") {|v| args.line = v }
+parser.on("--max-args MAX_ARGS", "maximum number of arguments parsed and displayed, defaults to 20") {|v| args.max_arges = v }
+parser.on("--ebpf") {|v| opt.ebpf = v }
+
+parser.on_tail("-h", "--help", "show this help message and exit") do
+  puts parser
+  puts
+  puts examples
+  exit
+end
+
+parser.parse!
+args.max_arges ||= "20"
 
 bpf_text = <<CLANG
 #include <uapi/linux/ptrace.h>
@@ -124,15 +164,21 @@ def get_ppid(pid)
   0
 end
 
-bpf_text.sub!("MAXARG", "20")
+bpf_text.sub!("MAXARG", args.max_args)
+if args.ebpf
+  puts(bpf_text)
+  exit
+end
+
 b = BCC.new(text: bpf_text)
 execve_fnname = b.get_syscall_fnname("execve")
 b.attach_kprobe(event: execve_fnname, fn_name: "syscall__execve")
 b.attach_kretprobe(event: execve_fnname, fn_name: "do_ret_sys_execve")
 
+printf("%-8s", "TIME(s)") if args.timestamp
 printf("%-16s %-6s %-6s %3s %s\n", "PCOMM", "PID", "PPID", "RET", "ARGS")
 
-start_ts = Time.now
+start_ts = Time.now.to_f
 argv = []
 
 b["events"].open_perf_buffer do |cpu, data, size|
@@ -142,17 +188,18 @@ b["events"].open_perf_buffer do |cpu, data, size|
     argv[event.pid] ||= []
     argv[event.pid] << event.argv
   elsif event.type == EVENT_RET
-    # skip = true if event.retval != 0 && !args.fails
-    # skip = true if args.name && /#{args.name}/ !~ event.comm
-    # skip = true if args.line && /#{args.line}/ !~ argv[event.pid].join(' ')
-    # if args.quote
-    #   argv[event.pid] = argv[event.pid].map{|arg| '"' + arg.gsub(/\"/, '\\"') + '"' }
-    # end
+    skip = true if event.retval != 0 && !args.fails
+    skip = true if args.name && /#{args.name}/ !~ event.comm
+    skip = true if args.line && /#{args.line}/ !~ argv[event.pid].join(' ')
+    if args.quote
+      argv[event.pid] = argv[event.pid].map{|arg| '"' + arg.gsub(/\"/, '\\"') + '"' }
+    end
 
     unless skip
       ppid_ = event.ppid > 0 ? event.ppid : get_ppid(event.pid)
       ppid = ppid_ > 0 ? ppid_.to_s : "?"
-      argv_text = argv[event.pid].join(' ').gsub(/\n/, '\\n')
+      argv_text = argv[event.pid].join(' ').gsub(/\n/, '\\n') rescue ""
+      printf("%-8.3f", (Time.now.to_f - start_ts)) if args.timestamp
       printf("%-16s %-6d %-6s %3d %s\n",
              event.comm, event.pid, ppid, event.retval, argv_text)
     end
