@@ -191,12 +191,7 @@ module RbBCC
         return nil
       end
 
-      idx = 0
-      while ptr[idx, 1] != "\x00"
-        idx += 1
-      end
-      ptr.size = idx + 1
-      ptr.to_s
+      Clib.__extract_char ptr
     end
 
     def load_func(func_name, prog_type)
@@ -224,7 +219,20 @@ module RbBCC
       ev_name = "p_" + event.gsub(/[\+\.]/, "_")
       fd = Clib.bpf_attach_kprobe(fn[:fd], 0, ev_name, event, event_off, 0)
       if fd < 0
-        raise SystemCallError.new(Fiddle.last_error)
+        raise SystemCallError.new("Failed to attach BPF program #{fn_name} to kprobe #{event}", Fiddle.last_error)
+      end
+      puts "Attach: #{ev_name}"
+      @kprobe_fds[ev_name] = fd
+      [ev_name, fd]
+    end
+
+    def attach_kretprobe(event:, fn_name:, event_re: nil, maxactive: 0)
+      # TODO: if event_re ...
+      fn = load_func(fn_name, BPF::KPROBE)
+      ev_name = "r_" + event.gsub(/[\+\.]/, "_")
+      fd = Clib.bpf_attach_kprobe(fn[:fd], 1, ev_name, event, 0, maxactive)
+      if fd < 0
+        raise SystemCallError.new("Failed to attach BPF program #{fn_name} to kretprobe #{event}", Fiddle.last_error)
       end
       puts "Attach: #{ev_name}"
       @kprobe_fds[ev_name] = fd
