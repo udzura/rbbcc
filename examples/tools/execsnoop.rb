@@ -26,10 +26,16 @@ bpf_text = <<CLANG
 
 #define ARGSIZE  128
 
+enum event_type {
+    EVENT_ARG,
+    EVENT_RET,
+};
+
 struct data_t {
     u32 pid;  // PID as in the userspace term (i.e. task->tgid in kernel)
     u32 ppid; // Parent PID as in the userspace term (i.e task->real_parent->tgid in kernel)
     char comm[TASK_COMM_LEN];
+    enum event_type type;
     char argv[ARGSIZE];
     int retval;
 };
@@ -71,12 +77,13 @@ int syscall__execve(struct pt_regs *ctx,
     data.ppid = task->real_parent->tgid;
 
     bpf_get_current_comm(&data.comm, sizeof(data.comm));
+    data.type = EVENT_ARG;
 
     __submit_arg(ctx, (void *)filename, &data);
 
     // skip first arg, as we submitted filename
     #pragma unroll
-    for (int i = 1; i < 64; i++) {
+    for (int i = 1; i < MAXARG; i++) {
         if (submit_arg(ctx, (void *)&__argv[i], &data) == 0)
              goto out;
     }
@@ -87,15 +94,41 @@ int syscall__execve(struct pt_regs *ctx,
 out:
     return 0;
 }
+
+int do_ret_sys_execve(struct pt_regs *ctx)
+{
+    struct data_t data = {};
+    struct task_struct *task;
+
+    data.pid = bpf_get_current_pid_tgid() >> 32;
+
+    task = (struct task_struct *)bpf_get_current_task();
+    // Some kernels, like Ubuntu 4.13.0-generic, return 0
+    // as the real_parent->tgid.
+    // We use the get_ppid function as a fallback in those cases. (#1883)
+    data.ppid = task->real_parent->tgid;
+
+    bpf_get_current_comm(&data.comm, sizeof(data.comm));
+    data.type = EVENT_RET;
+    data.retval = PT_REGS_RC(ctx);
+    events.perf_submit(ctx, &data, sizeof(data));
+
+    return 0;
+}
 CLANG
 
+EVENT_ARG = 0
+EVENT_RET = 1
+
+bpf_text.sub!("MAXARG", "64")
 b = BCC.new(text: bpf_text)
 execve_fnname = b.get_syscall_fnname("execve")
 b.attach_kprobe(event: execve_fnname, fn_name: "syscall__execve")
+b.attach_kretprobe(event: execve_fnname, fn_name: "do_ret_sys_execve")
 
 b["events"].open_perf_buffer do |cpu, data, size|
   event = b["events"].event(data)
-  p [event.pid, event.argv]
+  p [event.pid, event.ppid, %w(EVENT_ARG EVENT_TYPE)[event.type], event.argv, event.retval]
 end
 
 loop do
