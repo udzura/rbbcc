@@ -152,6 +152,7 @@ module RbBCC
     def initialize(text:, debug: 0, cflags: [], usdt_contexts: [], allow_rlimit: 0)
       @kprobe_fds = {}
       @uprobe_fds = {}
+      @tracepoint_fds = {}
       @usdt_contexts = usdt_contexts
       if code = gen_args_from_usdt
         text = code + text
@@ -214,6 +215,17 @@ module RbBCC
       return fnobj
     end
 
+    def attach_tracepoint(tp: "", tp_re: "", fn_name: "")
+      fn = load_func(fn_name, BPF::TRACEPOINT)
+      tp_category, tp_name = tp.split(':')
+      fd = Clib.bpf_attach_tracepoint(fn[:fd], tp_category, tp_name)
+      if fd < 0
+        raise SystemCallError.new("Failed to attach BPF program #{fn_name} to kretprobe #{tp}", Fiddle.last_error)
+      end
+      @tracepoint_fds[tp] = fd
+      self
+    end
+
     def attach_kprobe(event:, fn_name:, event_off: 0)
       fn = load_func(fn_name, BPF::KPROBE)
       ev_name = "p_" + event.gsub(/[\+\.]/, "_")
@@ -267,6 +279,22 @@ module RbBCC
 
       @uprobe_fds[ev_name] = fd
       [ev_name, fd]
+    end
+
+    def detach_tracepoint(tp)
+      unless @tracepoint_fds.include?(tp)
+        raise "Tracepoint #{tp} is not attached"
+      end
+      res = Clib.bpf_close_perf_event_fd(@tracepoint_fds[tp])
+      if res < 0
+        raise "Failed to detach BPF from tracepoint"
+      end
+      tp_category, tp_name = tp.split(':')
+      res = Clib.bpf_detach_tracepoint(tp_category, tp_name)
+      if res < 0
+        raise "Failed to detach BPF from tracepoint"
+      end
+      @tracepoint_fds.delete(tp)
     end
 
     def detach_kprobe_event(ev_name)
@@ -341,6 +369,10 @@ module RbBCC
 
       @uprobe_fds.each do |k, v|
         detach_uprobe_event(k)
+      end
+
+      @tracepoint_fds.each do |k, v|
+        detach_tracepoint(k)
       end
 
       if @module

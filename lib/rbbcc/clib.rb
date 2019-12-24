@@ -38,6 +38,8 @@ module RbBCC
     extern 'int bpf_detach_kprobe(char *)'
     extern 'int bpf_attach_uprobe(int, int, char *, char *, unsigned long, int)'
     extern 'int bpf_detach_uprobe(char *)'
+    extern 'int bpf_attach_tracepoint(int progfd, char *tp_category, char *tp_name)'
+    extern 'int bpf_detach_tracepoint(char *tp_category, char *tp_name)'
     extern 'int bpf_open_perf_event(unsigned int, unsigned long, int, int)'
     extern 'int bpf_close_perf_event_fd(int)'
     extern 'int bpf_get_first_key(int, void *, int)'
