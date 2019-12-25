@@ -14,6 +14,16 @@ module RbBCC
 
   class BCC
     class << self
+      def ksymname(name)
+        SymbolCache.resolve_global(name)
+      end
+
+      def support_raw_tracepoint
+        # kernel symbol "bpf_find_raw_tracepoint"
+        # indicates raw_tracepint support
+        ksymname("bpf_find_raw_tracepoint") || ksymname("bpf_get_raw_tracepoint")
+      end
+
       def get_kprobe_functions(event_re)
         blacklist = []
         fns = []
