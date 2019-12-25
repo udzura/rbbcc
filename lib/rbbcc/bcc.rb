@@ -220,8 +220,9 @@ module RbBCC
       tp_category, tp_name = tp.split(':')
       fd = Clib.bpf_attach_tracepoint(fn[:fd], tp_category, tp_name)
       if fd < 0
-        raise SystemCallError.new("Failed to attach BPF program #{fn_name} to kretprobe #{tp}", Fiddle.last_error)
+        raise SystemCallError.new("Failed to attach BPF program #{fn_name} to tracepoint #{tp}", Fiddle.last_error)
       end
+      puts "Attach: #{tp}"
       @tracepoint_fds[tp] = fd
       self
     end
@@ -455,6 +456,26 @@ module RbBCC
             event: fix_syscall_fnname(func_name[8..-1]),
             fn_name: fn[:name]
           )
+        elsif func_name.start_with?("kretprobe__")
+          fn = load_func(func_name, BPF::KPROBE)
+          attach_kretprobe(
+            event: fix_syscall_fnname(func_name[11..-1]),
+            fn_name: fn[:name]
+          )
+        elsif func_name.start_with?("tracepoint__")
+          fn = load_func(func_name, BPF::TRACEPOINT)
+          tp = fn[:name].sub(/^tracepoint__/, "").sub(/__/, ":")
+          attach_tracepoint(
+            tp: tp,
+            fn_name: fn[:name]
+          )
+        elsif func_name.start_with?("raw_tracepoint__")
+          fn = load_func(func_name, BPF::RAW_TRACEPOINT)
+          tp = fn[:name].sub(/^raw_tracepoint__/, "")
+          # attach_raw_tracepoint(
+          #   tp: tp,
+          #   fn_name: fn[:name]
+          # )
         end
       end
     end
