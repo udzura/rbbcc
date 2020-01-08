@@ -142,6 +142,6 @@ loop do
 end
 
 dist = b.get_table("dist")
-dist.print_log2_hist(label, section, section_print_fn: :to_i)
+dist.print_log2_hist(label, section_header: section, section_print_fn: :to_i)
 # dist.clear()
 exit

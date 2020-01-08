@@ -163,6 +163,7 @@ module RbBCC
       @kprobe_fds = {}
       @uprobe_fds = {}
       @tracepoint_fds = {}
+      @raw_tracepoint_fds = {}
       @usdt_contexts = usdt_contexts
       if code = gen_args_from_usdt
         text = code + text
@@ -237,6 +238,21 @@ module RbBCC
       self
     end
 
+    def attach_raw_tracepoint(tp: "", fn_name: "")
+      if @raw_tracepoint_fds.keys.include?(tp)
+        raise "Raw tracepoint #{tp} has been attached"
+      end
+
+      fn = load_func(fn_name, BPF::RAW_TRACEPOINT)
+      fd = Clib.bpf_attach_raw_tracepoint(fn[:fd], tp)
+      if fd < 0
+        raise SystemCallError.new("Failed to attach BPF program #{fn_name} to raw tracepoint #{tp}", Fiddle.last_error)
+      end
+      puts "Attach: #{tp}"
+      @raw_tracepoint_fds[tp] = fd
+      self
+    end
+
     def attach_kprobe(event:, fn_name:, event_off: 0)
       fn = load_func(fn_name, BPF::KPROBE)
       ev_name = "p_" + event.gsub(/[\+\.]/, "_")
@@ -293,7 +309,7 @@ module RbBCC
     end
 
     def detach_tracepoint(tp)
-      unless @tracepoint_fds.include?(tp)
+      unless @tracepoint_fds.keys.include?(tp)
         raise "Tracepoint #{tp} is not attached"
       end
       res = Clib.bpf_close_perf_event_fd(@tracepoint_fds[tp])
@@ -304,6 +320,18 @@ module RbBCC
       res = Clib.bpf_detach_tracepoint(tp_category, tp_name)
       if res < 0
         raise "Failed to detach BPF from tracepoint"
+      end
+      @tracepoint_fds.delete(tp)
+    end
+
+    def detach_raw_tracepoint(tp)
+      unless @raw_tracepoint_fds.keys.include?(tp)
+        raise "Raw tracepoint #{tp} is not attached"
+      end
+      begin
+        File.for_fd(@raw_tracepoint_fds[tp]).close
+      rescue => e
+        warn "Closing fd failed: #{e.inspect}. Ignore and skip"
       end
       @tracepoint_fds.delete(tp)
     end
@@ -384,6 +412,10 @@ module RbBCC
 
       @tracepoint_fds.each do |k, v|
         detach_tracepoint(k)
+      end
+
+      @raw_tracepoint_fds.each do |k, v|
+        detach_raw_tracepoint(k)
       end
 
       if @module
@@ -482,10 +514,10 @@ module RbBCC
         elsif func_name.start_with?("raw_tracepoint__")
           fn = load_func(func_name, BPF::RAW_TRACEPOINT)
           tp = fn[:name].sub(/^raw_tracepoint__/, "")
-          # attach_raw_tracepoint(
-          #   tp: tp,
-          #   fn_name: fn[:name]
-          # )
+          attach_raw_tracepoint(
+            tp: tp,
+            fn_name: fn[:name]
+          )
         end
       end
     end
