@@ -130,13 +130,14 @@ section = ""
 
 b = BCC.new(text: bpf_text)
 
-print("Tracing run queue latency... Hit Ctrl-C to end.")
+puts("Tracing run queue latency... Hit Ctrl-C to end.")
 
 # TODO: interval
 loop do
   begin
     sleep 1
   rescue Interrupt
+    puts
     break
   end
 end
