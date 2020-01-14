@@ -14,6 +14,10 @@ module RbBCC
 
   class BCC
     class << self
+      def ksym(addr, show_module: false, show_offset: false)
+        self.sym(addr, -1, show_module: show_module, show_offset: show_offset, demangle: false)
+      end
+
       def ksymname(name)
         SymbolCache.resolve_global(name)
       end
