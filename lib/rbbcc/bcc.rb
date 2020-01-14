@@ -366,6 +366,18 @@ module RbBCC
       @uprobe_fds.delete(ev_name)
     end
 
+    def num_open_kprobes
+      @kprobe_fds.size
+    end
+
+    def num_open_uprobes
+      @uprobe_fds.size
+    end
+
+    def num_open_tracepoints
+      @tracepoint_fds.size
+    end
+
     def tracefile
       @tracefile ||= File.open("#{TRACEFS}/trace_pipe", "rb")
     end
