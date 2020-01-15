@@ -1,0 +1,44 @@
+PATH
+  remote: ../..
+  specs:
+    rbbcc (0.2.0)
+
+PATH
+  remote: /usr/local/ghq/github.com/udzura/charty
+  specs:
+    charty (0.2.2)
+      red-colors
+
+GEM
+  remote: https://rubygems.org/
+  specs:
+    enumerable-statistics (2.0.1)
+    numo (0.1.1)
+      numo-fftw (~> 0.1.1)
+      numo-gnuplot (~> 0.2.4)
+      numo-gsl (~> 0.1.1)
+      numo-linalg (~> 0.1.0)
+      numo-narray (~> 0.9.1)
+    numo-fftw (0.1.1)
+      numo-narray (~> 0.9.0)
+    numo-gnuplot (0.2.4)
+    numo-gsl (0.1.2)
+      numo-narray (>= 0.9.0.8)
+    numo-linalg (0.1.5)
+      numo-narray (>= 0.9.1.4)
+    numo-narray (0.9.1.6)
+    red-colors (0.1.1)
+    unicode_plot (0.0.4)
+      enumerable-statistics (>= 2.0.1)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  charty!
+  numo
+  rbbcc!
+  unicode_plot
+
+BUNDLED WITH
+   2.0.2
