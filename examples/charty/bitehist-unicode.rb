@@ -73,7 +73,7 @@ def log2hist_unicode(table)
   end
 
   unless data.empty?
-    puts UnicodePlot.barplot(data: data, title: "log2 histogram").render
+    puts UnicodePlot.barplot(ylabel: "kbytes", data: data, title: "log2 histogram", color: :magenta).render
   else
     puts "No sample found."
   end
