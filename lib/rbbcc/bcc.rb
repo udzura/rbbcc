@@ -216,7 +216,7 @@ module RbBCC
       end
 
       log_level = 0
-      fd = Clib.bcc_func_load(@module, prog_type, func_name,
+      fd = Clib.do_bcc_func_load(@module, prog_type, func_name,
              Clib.bpf_function_start(@module, func_name),
              Clib.bpf_function_size(@module, func_name),
              Clib.bpf_module_license(@module),
