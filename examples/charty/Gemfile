@@ -8,3 +8,4 @@ gem "rbbcc", path: '../../'
 gem "charty", path: '/usr/local/ghq/github.com/udzura/charty'
 gem "unicode_plot"
 gem "numo"
+gem "matplotlib"
