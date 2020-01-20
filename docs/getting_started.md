@@ -4,7 +4,7 @@ RbBCC is a project to utilize the power of eBPF/BCC from Ruby.
 
 ## Setup
 
-RbBCC requires `libbcc.so` version **0.10.0**(we plan to support newer version of libbcc, but it may be done after rbbcc 1.0...).
+RbBCC requires `libbcc.so` version **0.11.0 or 0.10.0**(we plan to support newer version of libbcc, such as 0.12.0; but it may be done after rbbcc 1.0...).
 
 BTW we do not need to install header files, becuase current version of RbBCC uses the functionality of libbcc via ffi(We use MRI's standard library **fiddle**, not external gems).
 
