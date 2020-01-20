@@ -20,15 +20,18 @@ module RbBCC
       @@libbcc_version
     end
 
-    def self.libbcc_version?(ver)
-      @@libbcc_version == Gem::Version.new(ver)
+    def self.libbcc_version_gteq?(ver)
+      @@libbcc_version >= Gem::Version.new(ver)
     end
 
     extend Fiddle::Importer
     begin
-      dlload "libbcc.so.0.11.0"
-      self.libbcc_version = "0.11.0"
-    rescue Fiddle::DLError
+      default_load = ENV['LIBBCC_VERSION'] || "0.11.0"
+
+      dlload "libbcc.so.#{default_load}"
+      self.libbcc_version = default_load
+    rescue Fiddle::DLError => e
+      warn "Fall back to libbcc 0.10.0: #{e.inspect}"
       dlload "libbcc.so.0.10.0"
       self.libbcc_version = "0.10.0"
     end
@@ -39,7 +42,7 @@ module RbBCC
     extern 'char * bpf_function_name(void *, int)'
     extern 'void bpf_module_destroy(void *)'
 
-    if libbcc_version?("0.11.0")
+    if libbcc_version_gteq?("0.11.0")
       extern 'int bcc_func_load(
                   void *program, int prog_type, const char *name,
                   const struct bpf_insn *insns, int prog_len,
