@@ -57,7 +57,7 @@ parser.on_tail("-h", "--help", "show this help message and exit") do
 end
 
 parser.parse!
-args.max_arges ||= "20"
+args.max_args ||= "20"
 
 bpf_text = <<CLANG
 #include <uapi/linux/ptrace.h>
