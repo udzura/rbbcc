@@ -210,7 +210,7 @@ module RbBCC
       Clib.__extract_char ptr
     end
 
-    def load_func(func_name, prog_type)
+    def load_func(func_name, prog_type, device: nil)
       if @funcs.keys.include?(func_name)
         return @funcs[func_name]
       end
@@ -221,7 +221,7 @@ module RbBCC
              Clib.bpf_function_size(@module, func_name),
              Clib.bpf_module_license(@module),
              Clib.bpf_module_kern_version(@module),
-             log_level, nil, 0);
+             log_level, nil, 0, device);
       if fd < 0
         raise SystemCallError.new(Fiddle.last_error)
       end

@@ -12,8 +12,26 @@ module RbBCC
       ptr.to_s
     end
 
+    def self.libbcc_version=(ver)
+      @@libbcc_version ||= Gem::Version.new(ver)
+    end
+
+    def self.libbcc_version
+      @@libbcc_version
+    end
+
+    def self.libbcc_version?(ver)
+      @@libbcc_version == Gem::Version.new(ver)
+    end
+
     extend Fiddle::Importer
-    dlload "libbcc.so.0.10.0"
+    begin
+      dlload "libbcc.so.0.11.0"
+      self.libbcc_version = "0.11.0"
+    rescue Fiddle::DLError
+      dlload "libbcc.so.0.10.0"
+      self.libbcc_version = "0.10.0"
+    end
     typealias "size_t", "int"
 
     extern 'void * bpf_module_create_c_from_string(char *, unsigned int, char **, int, long)'
@@ -21,7 +39,23 @@ module RbBCC
     extern 'char * bpf_function_name(void *, int)'
     extern 'void bpf_module_destroy(void *)'
 
-    extern 'int bcc_func_load(void *, int, char *, void *, int, char *, unsigned int, int, char *, unsigned int)'
+    if libbcc_version?("0.11.0")
+      extern 'int bcc_func_load(
+                  void *program, int prog_type, const char *name,
+                  const struct bpf_insn *insns, int prog_len,
+                  const char *license, unsigned int kern_version,
+                  int log_level, char *log_buf, unsigned int log_buf_size,
+                  const char *dev_name)'
+      def self.do_bcc_func_load(mod, prog_type, name, insns, len, license, kver, loglv, buf, buf_size, device)
+        bcc_func_load(mod, prog_type, name, insns, len, license, kver, loglv, buf, buf_size, device)
+      end
+    else
+      extern 'int bcc_func_load(void *, int, char *, void *, int, char *, unsigned int, int, char *, unsigned int)'
+      def self.do_bcc_func_load(mod, prog_type, name, insns, len, license, kver, loglv, buf, buf_size, device)
+        bcc_func_load(mod, prog_type, name, insns, len, license, kver, loglv, buf, buf_size)
+      end
+    end
+
     extern 'void * bpf_function_start(void *, char *)'
     extern 'int bpf_function_size(void *, char *)'
     extern 'char * bpf_module_license(void *)'
