@@ -15,6 +15,7 @@ class BCCHelloTest < Minitest::Test
       }
     CLANG
     @module = BCC.new(text: code)
+    @pid = nil
   end
 
   def test_clone

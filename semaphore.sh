@@ -9,6 +9,4 @@ bundle install --path vendor/bundle
 
 bundle exec ruby -e "require 'rbbcc'; puts RbBCC::VERSION"
 
-sudo chmod u+s `rbenv which ruby`
-
-bundle exec rake test
+sudo -E env PATH=$PATH bundle exec rake test
