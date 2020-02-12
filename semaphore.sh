@@ -8,3 +8,5 @@ sudo apt-get install libbcc
 bundle install --path vendor/bundle
 
 bundle exec ruby -e "require 'rbbcc'; puts RbBCC::VERSION"
+
+sudo -E env PATH=$PATH bundle exec rake test
