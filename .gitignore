@@ -11,3 +11,7 @@
 .ruby-version
 
 /examples/work/*
+
+/bin
+!/bin/setup
+!/bin/console
