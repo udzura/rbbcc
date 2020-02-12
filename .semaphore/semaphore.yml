@@ -1,0 +1,15 @@
+version: v1.0
+name: Ruby Test
+agent:
+  machine:
+    type: e1-standard-2
+    os_image: ubuntu1804
+blocks:
+  - name: Basic Test
+    task:
+      jobs:
+        - name: ruby test
+          commands:
+            - sem-version ruby 2.6.5
+            - checkout
+            - ./semaphore.sh
