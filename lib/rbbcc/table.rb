@@ -96,6 +96,14 @@ module RbBCC
       if res < 0
         raise SystemCallError.new("Could not update table", Fiddle.last_error)
       end
+      leaf
+    end
+
+    def delete(key)
+      res = Clib.bpf_delete_elem(self.map_fd, key)
+      if res < 0
+        raise KeyError, "key not found"
+      end
       res
     end
 
@@ -125,6 +133,11 @@ module RbBCC
 
     def items
       enum_for(:each_pair).to_a
+    end
+
+    def clear
+      each_key {|key| self.delete(key) }
+      return items # reload contents
     end
 
     def print_log2_hist(val_type="value",
@@ -196,6 +209,19 @@ module RbBCC
 
     def [](key)
       super(normalize_key(key))
+    end
+
+    def []=(key, value)
+      super(normalize_key(key), value)
+    end
+
+    def clearitem(key)
+      self[key] = byref(0, @leafsize)
+    end
+
+    def delete(key)
+      # Delete in Array type does not have an effect, so zero out instead
+      clearitem(key)
     end
 
     def each(&b)

@@ -70,6 +70,7 @@ module RbBCC
     extern 'char * bpf_table_key_desc(void *, char *)'
     extern 'char * bpf_table_leaf_desc(void *, char *)'
     extern 'int bpf_update_elem(int fd, void *key, void *value, unsigned long long flags)'
+    extern 'int bpf_delete_elem(int fd, void *key)'
 
     extern 'int bpf_attach_kprobe(int, int, char *, char *, unsigned long, int)'
     extern 'int bpf_detach_kprobe(char *)'
