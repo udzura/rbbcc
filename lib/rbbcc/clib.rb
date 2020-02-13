@@ -25,15 +25,22 @@ module RbBCC
     end
 
     extend Fiddle::Importer
-    begin
-      default_load = ENV['LIBBCC_VERSION'] || "0.11.0"
+    targets = %w(0.12.0 0.11.0 0.10.0)
+    if default_load = ENV['LIBBCC_VERSION']
+      targets.unshift(default_load)
+      targets.uniq!
+    end
 
-      dlload "libbcc.so.#{default_load}"
-      self.libbcc_version = default_load
-    rescue Fiddle::DLError => e
-      warn "Fall back to libbcc 0.10.0: #{e.inspect}"
-      dlload "libbcc.so.0.10.0"
-      self.libbcc_version = "0.10.0"
+    targets.each do |to_load|
+      begin
+        dlload "libbcc.so.#{to_load}"
+        self.libbcc_version = to_load
+        break
+      rescue Fiddle::DLError => e
+        if targets.last == to_load
+          raise LoadError, "no target libbcc to load"
+        end
+      end
     end
     typealias "size_t", "int"
 
