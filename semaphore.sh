@@ -18,7 +18,8 @@ cache has_key libbcc-so && cache restore libbcc-so
 cd -
 
 if test "$(ls /opt/bcc | wc -l)" -le "0"; then
-  mkdir -p /opt/bcc-work
+  sudo mkdir -p /opt/bcc-work
+  sudo chown $(whoami) /opt/bcc-work
   cd /opt/bcc-work
   git clone https://github.com/iovisor/bcc.git
   mkdir bcc/build
@@ -45,14 +46,15 @@ if test "$(ls /opt/bcc | wc -l)" -le "0"; then
   make -j$(nproc)
   sudo make install
 
-  # link all under /lib to /opt/bcc
-  sudo ln -sf /opt/bcc/lib/libbcc.so.0.11.0 /opt/bcc/lib/libbcc.so.0.12.0 /usr/lib/x86_64-linux-gnu/
-
   cd /
+  cache has_key libbcc-so && cache clear libbcc-so
   cache store libbcc-so opt/bcc
   cd -
 fi
 cd $ORIG_DIR
+
+# link all tha objects under /lib from /opt/bcc
+sudo ln -sf /opt/bcc/lib/libbcc.so.0.11.0 /opt/bcc/lib/libbcc.so.0.12.0 /usr/lib/x86_64-linux-gnu/
 
 # Doing tests
 set -e
