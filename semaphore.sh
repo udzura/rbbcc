@@ -11,9 +11,13 @@ install-package --update-new libbcc
 
 # build libbcc 0.11/0.12
 ORIG_DIR=$(pwd)
+mkdir -p /opt/bcc
 
-mkdir -p $SEMAPHORE_CACHE_DIR/bcc
-if "$(ls $SEMAPHORE_CACHE_DIR/bcc | wc -l)" -gt "0"; then
+cd /
+cache has_key libbcc-so && cache restore libbcc-so
+cd -
+
+if "$(ls /opt/bcc | wc -l)" -gt "0"; then
   mkdir -p /opt/bcc-work
   cd /opt/bcc-work
   git clone git clone https://github.com/iovisor/bcc.git
@@ -25,7 +29,7 @@ if "$(ls $SEMAPHORE_CACHE_DIR/bcc | wc -l)" -gt "0"; then
   git submodule sync
   git submodule update
   cd build
-  cmake .. -DCMAKE_INSTALL_PREFIX=$SEMAPHORE_CACHE_DIR/bcc
+  cmake .. -DCMAKE_INSTALL_PREFIX=/opt/bcc
   make -j$(nproc)
   sudo make install
   make clean
@@ -37,16 +41,21 @@ if "$(ls $SEMAPHORE_CACHE_DIR/bcc | wc -l)" -gt "0"; then
   git submodule sync
   git submodule update
   cd build
-  cmake .. -DCMAKE_INSTALL_PREFIX=$SEMAPHORE_CACHE_DIR/bcc
+  cmake .. -DCMAKE_INSTALL_PREFIX=/opt/bcc
   make -j$(nproc)
   sudo make install
 
   # link all under /lib to /opt/bcc
-  sudo ln -sf $SEMAPHORE_CACHE_DIR/bcc/lib/libbcc.so.0.11.0 $SEMAPHORE_CACHE_DIR/bcc/lib/libbcc.so.0.12.0 /usr/lib/x86_64-linux-gnu/
+  sudo ln -sf /opt/bcc/lib/libbcc.so.0.11.0 /opt/bcc/lib/libbcc.so.0.12.0 /usr/lib/x86_64-linux-gnu/
+
+  cd /
+  cache store libbcc-so opt/bcc
+  cd -
 fi
 cd $ORIG_DIR
 
 # Doing tests
+set -e
 
 bundle install --path vendor/bundle
 
