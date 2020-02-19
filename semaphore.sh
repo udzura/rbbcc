@@ -2,19 +2,19 @@
 
 # packages
 
-install-package bison build-essential cmake flex git libedit-dev \
+sudo install-package bison build-essential cmake flex git libedit-dev \
   libllvm6.0 llvm-6.0-dev libclang-6.0-dev python zlib1g-dev libelf-dev
 
 sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4052245BD4284CDD
 echo "deb https://repo.iovisor.org/apt/$(lsb_release -cs) $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/iovisor.list
-install-package --update-new libbcc
+sudo install-package --update-new libbcc
 
 # build libbcc 0.11/0.12
 ORIG_DIR=$(pwd)
 sudo mkdir -p /opt/bcc
 
 cd /
-cache has_key libbcc-so && cache restore libbcc-so
+cache has_key libbcc-so && sudo cache restore libbcc-so
 cd -
 
 if test "$(ls /opt/bcc | wc -l)" -le "0"; then
