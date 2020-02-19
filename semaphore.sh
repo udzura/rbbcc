@@ -14,7 +14,10 @@ ORIG_DIR=$(pwd)
 sudo mkdir -p /opt/bcc
 
 cd /
-cache has_key libbcc-so && sudo cache restore libbcc-so
+sudo mkdir /opt/bcc
+sudo chown $(whoami) /opt/bcc
+cache has_key libbcc-so && cache restore libbcc-so
+sudo chown -R root /opt/bcc
 cd -
 
 if test "$(ls /opt/bcc | wc -l)" -le "0"; then
