@@ -11,7 +11,7 @@ install-package --update-new libbcc
 
 # build libbcc 0.11/0.12
 ORIG_DIR=$(pwd)
-mkdir -p /opt/bcc
+sudo mkdir -p /opt/bcc
 
 cd /
 cache has_key libbcc-so && cache restore libbcc-so
@@ -59,6 +59,6 @@ set -e
 
 bundle install --path vendor/bundle
 
-bundle exec ruby -e "require 'rbbcc'; puts RbBCC::VERSION"
+bundle exec ruby -e "require 'rbbcc'; puts 'Using rbbcc: %s && libbcc: %s' % [RbBCC::VERSION, RbBCC::Clib.libbcc_version.to_s]"
 
 sudo -E env PATH=$PATH bundle exec rake test
