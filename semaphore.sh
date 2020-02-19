@@ -17,7 +17,7 @@ cd /
 cache has_key libbcc-so && cache restore libbcc-so
 cd -
 
-if test "$(ls /opt/bcc | wc -l)" -gt "0"; then
+if test "$(ls /opt/bcc | wc -l)" -le "0"; then
   mkdir -p /opt/bcc-work
   cd /opt/bcc-work
   git clone git clone https://github.com/iovisor/bcc.git
