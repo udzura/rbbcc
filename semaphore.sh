@@ -2,7 +2,7 @@
 
 # packages
 
-install-packages bison build-essential cmake flex git libedit-dev \
+install-package bison build-essential cmake flex git libedit-dev \
   libllvm6.0 llvm-6.0-dev libclang-6.0-dev python zlib1g-dev libelf-dev
 
 sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4052245BD4284CDD
@@ -11,12 +11,17 @@ install-package --update-new libbcc
 
 # build libbcc 0.11/0.12
 ORIG_DIR=$(pwd)
+sudo mkdir -p /opt/bcc
 
-mkdir -p $SEMAPHORE_CACHE_DIR/bcc
-if "$(ls $SEMAPHORE_CACHE_DIR/bcc | wc -l)" -gt "0"; then
-  mkdir -p /opt/bcc-work
+cd /
+cache has_key libbcc-so && cache restore libbcc-so
+cd -
+
+if test "$(ls /opt/bcc | wc -l)" -le "0"; then
+  sudo mkdir -p /opt/bcc-work
+  sudo chown $(whoami) /opt/bcc-work
   cd /opt/bcc-work
-  git clone git clone https://github.com/iovisor/bcc.git
+  git clone https://github.com/iovisor/bcc.git
   mkdir bcc/build
   cd bcc
 
@@ -25,7 +30,7 @@ if "$(ls $SEMAPHORE_CACHE_DIR/bcc | wc -l)" -gt "0"; then
   git submodule sync
   git submodule update
   cd build
-  cmake .. -DCMAKE_INSTALL_PREFIX=$SEMAPHORE_CACHE_DIR/bcc
+  cmake .. -DCMAKE_INSTALL_PREFIX=/opt/bcc
   make -j$(nproc)
   sudo make install
   make clean
@@ -37,19 +42,25 @@ if "$(ls $SEMAPHORE_CACHE_DIR/bcc | wc -l)" -gt "0"; then
   git submodule sync
   git submodule update
   cd build
-  cmake .. -DCMAKE_INSTALL_PREFIX=$SEMAPHORE_CACHE_DIR/bcc
+  cmake .. -DCMAKE_INSTALL_PREFIX=/opt/bcc
   make -j$(nproc)
   sudo make install
 
-  # link all under /lib to /opt/bcc
-  sudo ln -sf $SEMAPHORE_CACHE_DIR/bcc/lib/libbcc.so.0.11.0 $SEMAPHORE_CACHE_DIR/bcc/lib/libbcc.so.0.12.0 /usr/lib/x86_64-linux-gnu/
+  cd /
+  cache has_key libbcc-so && cache clear libbcc-so
+  cache store libbcc-so opt/bcc
+  cd -
 fi
 cd $ORIG_DIR
 
+# link all tha objects under /lib from /opt/bcc
+sudo ln -sf /opt/bcc/lib/libbcc.so.0.11.0 /opt/bcc/lib/libbcc.so.0.12.0 /usr/lib/x86_64-linux-gnu/
+
 # Doing tests
+set -e
 
 bundle install --path vendor/bundle
 
-bundle exec ruby -e "require 'rbbcc'; puts RbBCC::VERSION"
+bundle exec ruby -e "require 'rbbcc'; puts 'Using rbbcc: %s && libbcc: %s' % [RbBCC::VERSION, RbBCC::Clib.libbcc_version.to_s]"
 
 sudo -E env PATH=$PATH bundle exec rake test

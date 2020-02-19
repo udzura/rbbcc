@@ -13,6 +13,7 @@ blocks:
             - env_var: LIBBCC_VERSION
               values: [ "0.12.0", "0.11.0", "0.10.0" ]
           commands:
+            - sem-version c 7
             - sem-version ruby 2.6.5
             - checkout
             - ./semaphore.sh
