@@ -65,7 +65,7 @@ set -e
 bundle install --path vendor/bundle
 
 bundle exec ruby -e "require 'rbbcc'; puts 'Using rbbcc: %s && libbcc: %s' % [RbBCC::VERSION, RbBCC::Clib.libbcc_version.to_s]"
-if test "$(bundle exec ruby -e 'require %q(rbccc); print RbBCC::Clib.libbcc_version.to_s')" != "${LIBBCC_VERSION}"; then
+if test "$(bundle exec ruby -e 'require %q(rbbcc); print RbBCC::Clib.libbcc_version.to_s')" != "${LIBBCC_VERSION}"; then
   echo "Test target mismatch"
   exit 127
 fi
