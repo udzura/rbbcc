@@ -28,7 +28,7 @@ class BCCHelloTest < Minitest::Test
     assert_equal("ruby", comm)
     assert_match(/\A\d+\z/, pid)
     assert_match(/\A\d+\.\d+\z/, ts)
-    assert_equal("Hello, World!\n", msg)
+    assert_equal("Not Hello, World!\n", msg)
   end
 
   def teardown
