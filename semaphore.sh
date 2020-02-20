@@ -2,25 +2,25 @@
 
 # packages
 
-sudo install-package bison build-essential cmake flex git libedit-dev \
-  libllvm6.0 llvm-6.0-dev libclang-6.0-dev python zlib1g-dev libelf-dev
-
 sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4052245BD4284CDD
 echo "deb https://repo.iovisor.org/apt/$(lsb_release -cs) $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/iovisor.list
-sudo install-package --update-new libbcc
+sudo apt -y update
+sudo apt -y install libbcc
 
 # build libbcc 0.11/0.12
 ORIG_DIR=$(pwd)
 sudo mkdir -p /opt/bcc
 
 cd /
-sudo mkdir /opt/bcc
 sudo chown $(whoami) /opt/bcc
 cache has_key libbcc-so && cache restore libbcc-so
 sudo chown -R root /opt/bcc
 cd -
 
 if test "$(ls /opt/bcc | wc -l)" -le "0"; then
+  sudo apt -y install bison build-essential cmake flex git libedit-dev \
+    libllvm6.0 llvm-6.0-dev libclang-6.0-dev python zlib1g-dev libelf-dev
+
   sudo mkdir -p /opt/bcc-work
   sudo chown $(whoami) /opt/bcc-work
   cd /opt/bcc-work
