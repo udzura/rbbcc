@@ -4,6 +4,7 @@
 
 sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4052245BD4284CDD
 echo "deb https://repo.iovisor.org/apt/$(lsb_release -cs) $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/iovisor.list
+sudo apt -y update
 sudo apt -y install libbcc
 
 # build libbcc 0.11/0.12
@@ -11,7 +12,6 @@ ORIG_DIR=$(pwd)
 sudo mkdir -p /opt/bcc
 
 cd /
-sudo mkdir /opt/bcc
 sudo chown $(whoami) /opt/bcc
 cache has_key libbcc-so && cache restore libbcc-so
 sudo chown -R root /opt/bcc
