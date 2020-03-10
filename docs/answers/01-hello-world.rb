@@ -2,6 +2,8 @@
 # Original hello_world.py:
 # Copyright (c) PLUMgrid, Inc.
 # Licensed under the Apache License, Version 2.0 (the "License")
+#
+# This Ruby version follows the Apache License 2.0
 
 # run in project examples directory with:
 # sudo ./hello_world.rb"
