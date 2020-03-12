@@ -28,3 +28,25 @@ Attach: p___x64_sys_clone
             bash-17950 [000] .... 244110.775263: 0: Hello, World!
             bash-17950 [000] .... 244114.080360: 0: Hello, World!
 ```
+
+There are six things to learn from this:
+
+1. ```text: '...'```: This defines a BPF program inline. The program is written in C.
+
+1. ```kprobe__sys_clone()```: This is a short-cut for kernel dynamic tracing via kprobes. If the C function begins with ``kprobe__``, the rest is treated as a kernel function name to instrument, in this case, ```sys_clone()```.
+
+1. ```void *ctx```: ctx has arguments, but since we aren't using them here, we'll just cast it to ```void *```.
+
+1. ```bpf_trace_printk()```: A simple kernel facility for printf() to the common trace_pipe (/sys/kernel/debug/tracing/trace_pipe). This is ok for some quick examples, but has limitations: 3 args max, 1 %s only, and trace_pipe is globally shared, so concurrent programs will have clashing output. A better interface is via BPF_PERF_OUTPUT(), covered later.
+
+1. ```return 0;```: Necessary formality (if you want to know why, see [bcc#139](https://github.com/iovisor/bcc/issues/139)).
+
+1. ```Table#trace_print```: A bcc routine that reads trace_pipe and prints the output.
+
+### Lesson 2. sys_sync()
+
+Write a program that traces the sys_sync() kernel function. Print "sys_sync() called" when it runs. Test by running ```sync``` in another session while tracing. The hello_world.rb program has everything you need for this.
+
+Improve it by printing "Tracing sys_sync()... Ctrl-C to end." when the program first starts. Hint: it's just Ruby and you can rescue `Interrupt` exception.
+
+On of the answer exampkle is: [answers/02-sys_sync.rb](answers/02-sys_sync.rb)
