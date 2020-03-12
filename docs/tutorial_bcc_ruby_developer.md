@@ -51,7 +51,7 @@ Improve it by printing "Tracing sys_sync()... Ctrl-C to end." when the program f
 
 On of the answer example is: [answers/02-sys_sync.rb](answers/02-sys_sync.rb)
 
-Tips: how to call `sync(2)` explicitly:
+Tips: how to call `sync(2)` explicitly via Ruby; or just type `sync` at your terminal:
 
 ```console
 # ausyscall sync 
@@ -107,7 +107,7 @@ rescue => e
 end
 ```
 
-This is similar to hello_world.RB, and traces new processes via sys_clone() again, but has a few more things to learn:
+This is similar to hello_world.rb, and traces new processes via sys_clone() again, but has a few more things to learn:
 
 1. ```prog:```: This time we declare the C program as a variable, and later refer to it. This is useful if you want to add some string substitutions based on command line arguments.
 
@@ -116,3 +116,72 @@ This is similar to hello_world.RB, and traces new processes via sys_clone() agai
 1. ```b.attach_kprobe(event: b.get_syscall_fnname("clone"), fn_name: "hello")```: Creates a kprobe for the kernel clone system call function, which will execute our defined hello() function. You can call attach_kprobe() more than once, and attach your C function to multiple kernel functions.
 
 1. ```b.trace_fields do |...|```: Loop wirth a fixed set of fields from trace_pipe(without blcok, this method just returns the same set of fields). Similar to trace_print(), this is handy for hacking, but for real tooling we should switch to BPF_PERF_OUTPUT().
+
+### Lesson 4. sync_timing.py
+
+Remember the days of sysadmins typing ```sync``` three times on a slow console before ```reboot```, to give the first asynchronous sync time to complete? Then someone thought ```sync;sync;sync``` was clever, to run them all on one line, which became industry practice despite defeating the original purpose! And then sync became synchronous, so more reasons it was silly. Anyway.
+
+The following example times how quickly the ```do_sync``` function is called, and prints output if it has been called more recently than one second ago. A ```sync;sync;sync``` will print output for the 2nd and 3rd sync's:
+
+```
+# ./examples/tracing/sync_timing.py
+Tracing for quick sync's... Ctrl-C to end
+At time 0.00 s: multiple syncs detected, last 95 ms ago
+At time 0.10 s: multiple syncs detected, last 96 ms ago
+```
+
+This program is [answers/04-sync_timing.rb](answers/04-sync_timing.rb):
+
+```ruby
+require "rbbcc"
+include RbBCC
+
+# load BPF program
+b = BCC.new(text: <<BPF)
+#include <uapi/linux/ptrace.h>
+
+BPF_HASH(last);
+
+int do_trace(struct pt_regs *ctx) {
+    u64 ts, *tsp, delta, key = 0;
+
+    // attempt to read stored timestamp
+    tsp = last.lookup(&key);
+    if (tsp != 0) {
+        delta = bpf_ktime_get_ns() - *tsp;
+        if (delta < 1000000000) {
+            // output if time is less than 1 second
+            bpf_trace_printk("%d\\n", delta / 1000000);
+        }
+        last.delete(&key);
+    }
+
+    // update stored timestamp
+    ts = bpf_ktime_get_ns();
+    last.update(&key, &ts);
+    return 0;
+}
+BPF
+
+b.attach_kprobe(event: b.get_syscall_fnname("sync"), fn_name: "do_trace")
+puts("Tracing for quick sync's... Ctrl-C to end")
+
+# format output
+start = 0
+b.trace_fields do |task, pid, cpu, flags, ts, ms|
+  start = ts.to_f if start.zero?
+  ts = ts.to_f - start
+  puts("At time %.2f s: multiple syncs detected, last %s ms ago" % [ts, ms.chomp])
+end
+```
+
+Things to learn (all in C):
+
+1. ```bpf_ktime_get_ns()```: Returns the time as nanoseconds.
+1. ```BPF_HASH(last)```: Creates a BPF map object that is a hash (associative array), called "last". We didn't specify any further arguments, so it defaults to key and value types of u64.
+1. ```key = 0```: We'll only store one key/value pair in this hash, where the key is hardwired to zero.
+1. ```last.lookup(&key)```: Lookup the key in the hash, and return a pointer to its value if it exists, else NULL. We pass the key in as an address to a pointer.
+1. ```last.delete(&key)```: Delete the key from the hash. This is currently required because of [a kernel bug in `.update()`](https://git.kernel.org/cgit/linux/kernel/git/davem/net.git/commit/?id=a6ed3ea65d9868fdf9eff84e6fe4f666b8d14b02).
+1. ```last.update(&key, &ts)```: Associate the value in the 2nd argument to the key, overwriting any previous value. This records the timestamp.
+
+*Note for RbBCC developers:* Type of `trace_fields` return values differ from python's This should be fixed.
