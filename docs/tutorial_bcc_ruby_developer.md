@@ -632,3 +632,61 @@ Things to learn:
 1. ```PT_REGS_PARM1(ctx)```: This fetches the first argument to ```strlen()```, which is the string.
 1. ```b.attach_uprobe(name: "c", sym: "strlen", fn_name: "count")```: Attach to library "c" (if this is the main program, use its pathname), instrument the user-level function ```strlen()```, and on execution call our C function ```count()```.
 1. For ```BPF_HASH```, you should call ```k/v.to_bcc_value``` to iterate in Ruby block. This behavior is Ruby specific and would be changed in the future.
+
+### Lesson 15. nodejs_http_server.rb
+
+This program instruments a user statically-defined tracing (USDT) probe, which is the user-level version of a kernel tracepoint. Sample output:
+
+```
+# bundle exec answers/15-nodejs_http_server.rb
+TIME(s)            COMM             PID    ARGS
+24653324.561322998 node             24728  path:/index.html
+24653335.343401998 node             24728  path:/images/welcome.png
+24653340.510164998 node             24728  path:/images/favicon.png
+```
+
+Example code from [answers/15-nodejs_http_server.rb](answers/15-nodejs_http_server.rb)
+
+```ruby
+require 'rbbcc'
+include RbBCC
+
+if ARGV.size != 1 :
+  print("USAGE: #{$0} PID")
+  exit()
+end
+pid = ARGV[0]
+debug = !!ENV['DEBUG']
+
+# load BPF program
+bpf_text = <<BPF
+#include <uapi/linux/ptrace.h>
+int do_trace(struct pt_regs *ctx) {
+    uint64_t addr;
+    char path[128]={0};
+    bpf_usdt_readarg(6, ctx, &addr);
+    bpf_probe_read(&path, sizeof(path), (void *)addr);
+    bpf_trace_printk("path:%s\\n", path);
+    return 0;
+};
+BPF
+
+# enable USDT probe from given PID
+u = USDT.new(pid: pid.to_i)
+u.enable_probe(probe: "http__server__request", fn_name: "do_trace")
+if debug
+  puts(u.get_text)
+  puts(bpf_text)
+end
+
+# initialize BPF
+b = BCC.new(text: bpf_text, usdt_contexts: [u])
+```
+
+Things to learn:
+
+1. ```bpf_usdt_readarg(6, ctx, &addr)```: Read the address of argument 6 from the USDT probe into ```addr```.
+1. ```bpf_probe_read(&path, sizeof(path), (void *)addr)```: Now the string ```addr``` points to into our ```path``` variable.
+1. ```u = USDT.new(pid: pid.to_i)```: Initialize USDT tracing for the given PID.
+1. ```u.enable_probe(probe: "http__server__request", fn_name: "do_trace")```: Attach our ```do_trace()``` BPF C function to the Node.js ```http__server__request``` USDT probe.
+1. ```b = BCC.new(text: bpf_text, usdt_contexts: [u])```: Need to pass in our USDT object, ```u```, to BPF object creation.
