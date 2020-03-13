@@ -94,6 +94,10 @@ $ docker run --privileged \
             runc-5025  [003] d...  1237.797464: : Hello, World!
 ```
 
+## Documents
+
+See [docs/](docs/) for getting started and tutorial.
+
 ## Development
 
 After checking out the repo, run `bin/setup` to install dependencies. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
