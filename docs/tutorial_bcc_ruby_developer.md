@@ -353,3 +353,68 @@ Rewrite sync_timing.rb, from a prior lesson, to use ```BPF_PERF_OUTPUT```.
 
 Example is at [answers/08-sync_perf_output.rb](answers/08-sync_perf_output.rb).
 
+### Lesson 9. bitehist.rb
+
+The following tool records a histogram of disk I/O sizes. Sample output:
+
+```
+# bundle exec answers/09-bitehist.rb
+Tracing... Hit Ctrl-C to end.
+^C
+     kbytes          : count     distribution
+       0 -> 1        : 3        |                                      |
+       2 -> 3        : 0        |                                      |
+       4 -> 7        : 211      |**********                            |
+       8 -> 15       : 0        |                                      |
+      16 -> 31       : 0        |                                      |
+      32 -> 63       : 0        |                                      |
+      64 -> 127      : 1        |                                      |
+     128 -> 255      : 800      |**************************************|
+```
+
+Code is [answers/09-bitehist.rb](answers/09-bitehist.rb):
+
+```ruby
+require 'rbbcc'
+include RbBCC
+
+# load BPF program
+b = BCC.new(text: <<BPF)
+#include <uapi/linux/ptrace.h>
+#include <linux/blkdev.h>
+
+BPF_HISTOGRAM(dist);
+
+int kprobe__blk_account_io_completion(struct pt_regs *ctx, struct request *req)
+{
+	dist.increment(bpf_log2l(req->__data_len / 1024));
+	return 0;
+}
+BPF
+
+# header
+puts("Tracing... Hit Ctrl-C to end.")
+
+# trace until Ctrl-C
+begin
+  loop { sleep 0.1 }
+rescue Interrupt
+  puts
+end
+
+# output
+b["dist"].print_log2_hist("kbytes")
+```
+
+A recap from earlier lessons:
+
+- ```kprobe__```: This prefix means the rest will be treated as a kernel function name that will be instrumented using kprobe.
+- ```struct pt_regs *ctx, struct request *req```: Arguments to kprobe. The ```ctx``` is registers and BPF context, the ```req``` is the first argument to the instrumented function: ```blk_account_io_completion()```.
+- ```req->__data_len```: Dereferencing that member.
+
+New things to learn:
+
+1. ```BPF_HISTOGRAM(dist)```: Defines a BPF map object that is a histogram, and names it "dist".
+1. ```dist.increment()```: Increments the histogram bucket index provided as first argument by one by default. Optionally, custom increments can be passed as the second argument.
+1. ```bpf_log2l()```: Returns the log-2 of the provided value. This becomes the index of our histogram, so that we're constructing a power-of-2 histogram.
+1. ```b["dist"].print_log2_hist("kbytes")```: Prints the "dist" histogram as power-of-2, with a column header of "kbytes". The only data transferred from kernel to user space is the bucket counts, making this efficient.
