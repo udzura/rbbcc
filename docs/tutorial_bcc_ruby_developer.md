@@ -192,4 +192,67 @@ Modify the sync_timing.rb program (prior lesson) to store the count of all kerne
 
 One of sample implementation is at [answers/05-sync_count.rb](answers/05-sync_count.rb).
 
+### Lesson 6. disksnoop.rb
+
+Browse the [answers/06-disksnoop.rb](answers/06-disksnoop.rb) program to see what is new. Here is some sample output:
+
+```
+# bundle exec answers/06-disksnoop.rb
+TIME(s)            T  BYTES    LAT(ms)
+16458043.436012    W  4096        3.13
+16458043.437326    W  4096        4.44
+16458044.126545    R  4096       42.82
+16458044.129872    R  4096        3.24
+[...]
+```
+
+And a code snippet:
+
+```ruby
+require 'rbbcc'
+include RbBCC
+
+REQ_WRITE = 1		# from include/linux/blk_types.h
+
+# load BPF program
+b = BCC.new(text: <<CLANG)
+#include <uapi/linux/ptrace.h>
+#include <linux/blkdev.h>
+
+BPF_HASH(start, struct request *);
+
+void trace_start(struct pt_regs *ctx, struct request *req) {
+  // stash start timestamp by request ptr
+  u64 ts = bpf_ktime_get_ns();
+
+  start.update(&req, &ts);
+}
+
+void trace_completion(struct pt_regs *ctx, struct request *req) {
+  u64 *tsp, delta;
+
+  tsp = start.lookup(&req);
+  if (tsp != 0) {
+    delta = bpf_ktime_get_ns() - *tsp;
+    bpf_trace_printk("%d %x %d\\n", req->__data_len,
+        req->cmd_flags, delta / 1000);
+    start.delete(&req);
+  }
+}
+CLANG
+
+b.attach_kprobe(event: "blk_start_request", fn_name: "trace_start")
+b.attach_kprobe(event: "blk_mq_start_request", fn_name: "trace_start")
+b.attach_kprobe(event: "blk_account_io_completion", fn_name: "trace_completion")
+[...]
+```
+
+Things to learn:
+
+1. ```REQ_WRITE```: We're defining a kernel constant in the Ruby program because we'll use it there later. If we were using REQ_WRITE in the BPF program, it should just work (without needing to be defined) with the appropriate #includes.
+1. ```trace_start(struct pt_regs *ctx, struct request *req)```: This function will later be attached to kprobes. The arguments to kprobe functions are ```struct pt_regs *ctx```, for registers and BPF context, and then the actual arguments to the function. We'll attach this to blk_start_request(), where the first argument is ```struct request *```.
+1. ```start.update(&req, &ts)```: We're using the pointer to the request struct as a key in our hash. What? This is commonplace in tracing. Pointers to structs turn out to be great keys, as they are unique: two structs can't have the same pointer address. (Just be careful about when it gets free'd and reused.) So what we're really doing is tagging the request struct, which describes the disk I/O, with our own timestamp, so that we can time it. There's two common keys used for storing timestamps: pointers to structs, and, thread IDs (for timing function entry to return).
+1. ```req->__data_len```: We're dereferencing members of ```struct request```. See its definition in the kernel source for what members are there. bcc actually rewrites these expressions to be a series of ```bpf_probe_read()``` calls. Sometimes bcc can't handle a complex dereference, and you need to call ```bpf_probe_read()``` directly.
+
+This is a pretty interesting program, and if you can understand all the code, you'll understand many important basics. We're still using the bpf_trace_printk() hack, so let's fix that next.
 
