@@ -256,3 +256,93 @@ Things to learn:
 
 This is a pretty interesting program, and if you can understand all the code, you'll understand many important basics. We're still using the bpf_trace_printk() hack, so let's fix that next.
 
+### Lesson 7. hello_perf_output.rb
+
+Let's finally stop using bpf_trace_printk() and use the proper BPF_PERF_OUTPUT() interface. This will also mean we stop getting the free trace_field() members like PID and timestamp, and will need to fetch them directly. Sample output while commands are run in another session:
+
+```
+# bundle exec answers/07-hello_perf_output.rb
+TIME(s)            COMM             PID    MESSAGE
+0.000000000        bash             22986  Hello, perf_output!
+0.021080275        systemd-udevd    484    Hello, perf_output!
+0.021359520        systemd-udevd    484    Hello, perf_output!
+0.021590610        systemd-udevd    484    Hello, perf_output!
+[...]
+```
+
+Code is [answers/07-hello_perf_output.rb](answers/07-hello_perf_output.rb):
+
+```ruby
+#!/usr/bin/env ruby
+#
+# This is a Hello World example that uses BPF_PERF_OUTPUT.
+# Ported from hello_perf_output.py
+
+require 'rbbcc'
+include RbBCC
+
+# define BPF program
+prog = """
+#include <linux/sched.h>
+
+// define output data structure in C
+struct data_t {
+    u32 pid;
+    u64 ts;
+    char comm[TASK_COMM_LEN];
+};
+BPF_PERF_OUTPUT(events);
+
+int hello(struct pt_regs *ctx) {
+    struct data_t data = {};
+
+    data.pid = bpf_get_current_pid_tgid();
+    data.ts = bpf_ktime_get_ns();
+    bpf_get_current_comm(&data.comm, sizeof(data.comm));
+
+    events.perf_submit(ctx, &data, sizeof(data));
+
+    return 0;
+}
+"""
+
+# load BPF program
+b = BCC.new(text: prog)
+b.attach_kprobe(event: b.get_syscall_fnname("clone"), fn_name: "hello")
+
+# header
+puts("%-18s %-16s %-6s %s" % ["TIME(s)", "COMM", "PID", "MESSAGE"])
+
+# process event
+start = 0
+print_event = lambda { |cpu, data, size|
+  event = b["events"].event(data)
+  if start == 0
+    start = event.ts
+  end
+
+  time_s = ((event.ts - start).to_f) / 1000000000
+  puts("%-18.9f %-16s %-6d %s" % [time_s, event.comm, event.pid,
+                                  "Hello, perf_output!"])
+}
+
+# loop with callback to print_event
+b["events"].open_perf_buffer(&print_event)
+
+loop do
+  b.perf_buffer_poll()
+end
+```
+
+Things to learn:
+
+1. ```struct data_t```: This defines the C struct we'll use to pass data from kernel to user space.
+1. ```BPF_PERF_OUTPUT(events)```: This names our output channel "events".
+1. ```struct data_t data = {};```: Create an empty data_t struct that we'll then populate.
+1. ```bpf_get_current_pid_tgid()```: Returns the process ID in the lower 32 bits (kernel's view of the PID, which in user space is usually presented as the thread ID), and the thread group ID in the upper 32 bits (what user space often thinks of as the PID). By directly setting this to a u32, we discard the upper 32 bits. Should you be presenting the PID or the TGID? For a multi-threaded app, the TGID will be the same, so you need the PID to differentiate them, if that's what you want. It's also a question of expectations for the end user.
+1. ```bpf_get_current_comm()```: Populates the first argument address with the current process name.
+1. ```events.perf_submit()```: Submit the event for user space to read via a perf ring buffer.
+1. ```print_event = lambda { ... }```: Define a Ruby proc(lambda) that will handle reading events from the ```events``` stream; BTW unlike Python, you can pass block directory to method `open_perf_buffer`.
+1. ```b["events"].event(data)```: Now get the event as a Ruby object, auto-generated from the C declaration.
+1. ```b["events"].open_perf_buffer(&print_event)```: Associate the proc ```print_event``` with the ```events``` stream.
+1. ```loop { b.perf_buffer_poll() }```: Block waiting for events.

@@ -93,7 +93,7 @@ module RbBCC
       self[key] || raise(KeyError, "key not found")
     end
 
-    def []=(key, leaf)
+    def []=(_key, leaf)
       key = normalize_key(_key)
       res = Clib.bpf_update_elem(self.map_fd, key, leaf, 0)
       if res < 0
