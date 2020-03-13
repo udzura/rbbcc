@@ -472,3 +472,71 @@ Browse the code in [answers/11-vfsreadlat.rb](answers/11-vfsreadlat.rb) and [ans
 1. ```b = BCC.new(src_file: "vfsreadlat.c")```: Read the BPF C program from a separate source file.
 1. ```b.attach_kretprobe(event: "vfs_read", fn_name: "do_return")```: Attaches the BPF C function ```do_return()``` to the return of the kernel function ```vfs_read()```. This is a kretprobe: instrumenting the return from a function, rather than its entry.
 1. ```b["dist"].clear()```: Clears the histogram.
+
+### Lesson 12. urandomread.rb
+
+Tracing while a ```dd if=/dev/urandom of=/dev/null bs=8k count=5``` is run:
+
+```
+# bundle exec answers/12-urandomread.rb
+TIME(s)            COMM             PID    GOTBITS
+24652832.956994001 smtp             24690  384
+24652837.726500999 dd               24692  65536
+24652837.727111001 dd               24692  65536
+24652837.727703001 dd               24692  65536
+24652837.728294998 dd               24692  65536
+24652837.728888001 dd               24692  65536
+```
+
+Hah! I caught smtp by accident. Code is [answers/12-urandomread.rb](answers/12-urandomread.rb):
+
+```ruby
+require 'rbbcc'
+include RbBCC
+
+b = BCC.new(text: <<BPF)
+TRACEPOINT_PROBE(random, urandom_read) {
+    // args is from /sys/kernel/debug/tracing/events/random/urandom_read/format
+    bpf_trace_printk("%d\\n", args->got_bits);
+    return 0;
+}
+BPF
+
+# header
+puts("%-18s %-16s %-6s %s" % ["TIME(s)", "COMM", "PID", "GOTBITS"])
+
+# format output
+loop do
+  begin
+    b.trace_fields do |task, pid, cpu, flags, ts, msg|
+      puts("%-18.9f %-16s %-6d %s" % [ts, task, pid, msg])
+    end
+  rescue Interrupt
+    exit
+  end
+end
+```
+
+Things to learn:
+
+1. ```TRACEPOINT_PROBE(random, urandom_read)```: Instrument the kernel tracepoint ```random:urandom_read```. These have a stable API, and thus are recommend to use instead of kprobes, wherever possible. You can run ```perf list``` for a list of tracepoints. Linux >= 4.7 is required to attach BPF programs to tracepoints.
+1. ```args->got_bits```: ```args``` is auto-populated to be a structure of the tracepoint arguments. The comment above says where you can see that structure. Eg:
+
+```
+# cat /sys/kernel/debug/tracing/events/random/urandom_read/format
+name: urandom_read
+ID: 972
+format:
+	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
+	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
+	field:unsigned char common_preempt_count;	offset:3;	size:1;	signed:0;
+	field:int common_pid;	offset:4;	size:4;	signed:1;
+
+	field:int got_bits;	offset:8;	size:4;	signed:1;
+	field:int pool_left;	offset:12;	size:4;	signed:1;
+	field:int input_left;	offset:16;	size:4;	signed:1;
+
+print fmt: "got_bits %d nonblocking_pool_entropy_left %d input_entropy_left %d", REC->got_bits, REC->pool_left, REC->input_left
+```
+
+In this case, we were printing the ```got_bits``` member.

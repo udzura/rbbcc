@@ -188,7 +188,7 @@ module RbBCC
         hdr_file = BCC._find_file(hdr_file)
       end
 
-      if src_file.end_with?(".b")
+      if src_file && src_file.end_with?(".b")
         @module = Clib.bpf_module_create_b(src_file, hdr_file, debug, device)
       else
         if src_file
