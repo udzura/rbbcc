@@ -16,7 +16,7 @@ module RbBCC
     class << self
       def _find_file(filename)
         if filename
-          if File.exist?(filename)
+          unless File.exist?(filename)
             t = File.expand_path "../#{filename}", $0
             if File.exist?(t)
               filename = t

@@ -424,3 +424,51 @@ New things to learn:
 Write a program that times disk I/O, and prints a histogram of their latency. Disk I/O instrumentation and timing can be found in the disksnoop.rb program from a prior lesson, and histogram code can be found in bitehist.rb from a prior lesson.
 
 Example is at [answers/10-disklatency.rb](answers/10-disklatency.rb).
+
+### Lesson 11. vfsreadlat.rb
+
+This example is split into separate Python and C files. Example output:
+
+```
+# bundle exec answers/11-vfsreadlat.rb 1
+Tracing... Hit Ctrl-C to end.
+     usecs               : count     distribution
+         0 -> 1          : 0        |                                        |
+         2 -> 3          : 2        |***********                             |
+         4 -> 7          : 7        |****************************************|
+         8 -> 15         : 4        |**********************                  |
+
+     usecs               : count     distribution
+         0 -> 1          : 29       |****************************************|
+         2 -> 3          : 28       |**************************************  |
+         4 -> 7          : 4        |*****                                   |
+         8 -> 15         : 8        |***********                             |
+        16 -> 31         : 0        |                                        |
+        32 -> 63         : 0        |                                        |
+        64 -> 127        : 0        |                                        |
+       128 -> 255        : 0        |                                        |
+       256 -> 511        : 2        |**                                      |
+       512 -> 1023       : 0        |                                        |
+      1024 -> 2047       : 0        |                                        |
+      2048 -> 4095       : 0        |                                        |
+      4096 -> 8191       : 4        |*****                                   |
+      8192 -> 16383      : 6        |********                                |
+     16384 -> 32767      : 9        |************                            |
+     32768 -> 65535      : 6        |********                                |
+     65536 -> 131071     : 2        |**                                      |
+
+     usecs               : count     distribution
+         0 -> 1          : 11       |****************************************|
+         2 -> 3          : 2        |*******                                 |
+         4 -> 7          : 10       |************************************    |
+         8 -> 15         : 8        |*****************************           |
+        16 -> 31         : 1        |***                                     |
+        32 -> 63         : 2        |*******                                 |
+[...]
+```
+
+Browse the code in [answers/11-vfsreadlat.rb](answers/11-vfsreadlat.rb) and [answers/11-vfsreadlat.c](answers/11-vfsreadlat.c). Things to learn:
+
+1. ```b = BCC.new(src_file: "vfsreadlat.c")```: Read the BPF C program from a separate source file.
+1. ```b.attach_kretprobe(event: "vfs_read", fn_name: "do_return")```: Attaches the BPF C function ```do_return()``` to the return of the kernel function ```vfs_read()```. This is a kretprobe: instrumenting the return from a function, rather than its entry.
+1. ```b["dist"].clear()```: Clears the histogram.
