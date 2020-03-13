@@ -548,3 +548,87 @@ Convert disksnoop.rb from a previous lesson to use the ```block:block_rq_issue``
 Example is at [answers/13-disksnoop_fixed.rb](answers/13-disksnoop_fixed.rb).
 
 
+### Lesson 14. strlen_count.rb
+
+This program instruments a user-level function, the ```strlen()``` library function, and frequency counts its string argument. Example output:
+
+```
+# bundle exec answers/14-strlen_count.rb
+Tracing strlen()... Hit Ctrl-C to end.
+^C     COUNT STRING
+         1 " "
+         1 "/bin/ls"
+         1 "."
+         1 "cpudist.py.1"
+         1 ".bashrc"
+         1 "ls --color=auto"
+         1 "key_t"
+[...]
+        10 "a7:~# "
+        10 "/root"
+        12 "LC_ALL"
+        12 "en_US.UTF-8"
+        13 "en_US.UTF-8"
+        20 "~"
+        70 "#%^,~:-=?+/}"
+       340 "\x01\x1b]0;root@bgregg-test: ~\x07\x02root@bgregg-test:~# "
+```
+
+These are various strings that are being processed by this library function while tracing, along with their frequency counts. ```strlen()``` was called on "LC_ALL" 12 times, for example.
+
+Code is [answers/14-strlen_count.rb](answers/14-strlen_count.rb):
+
+```ruby
+require 'rbbcc'
+include RbBCC
+
+# load BPF program
+b = BCC.new(text: <<BPF)
+#include <uapi/linux/ptrace.h>
+
+struct key_t {
+    char c[80];
+};
+BPF_HASH(counts, struct key_t);
+
+int count(struct pt_regs *ctx) {
+    if (!PT_REGS_PARM1(ctx))
+        return 0;
+
+    struct key_t key = {};
+    u64 zero = 0, *val;
+
+    bpf_probe_read(&key.c, sizeof(key.c), (void *)PT_REGS_PARM1(ctx));
+    // could also use `counts.increment(key)`
+    val = counts.lookup_or_try_init(&key, &zero);
+    if (val) {
+      (*val)++;
+    }
+    return 0;
+};
+BPF
+b.attach_uprobe(name: "c", sym: "strlen", fn_name: "count")
+
+# header
+print("Tracing strlen()... Hit Ctrl-C to end.")
+
+# sleep until Ctrl-C
+begin
+  sleep(99999999)
+rescue Interrupt
+  puts
+end
+
+# print output
+puts("%10s %s" % ["COUNT", "STRING"])
+counts = b.get_table("counts")
+counts.items.sort_by{|k, v| v.to_bcc_value }.each do |k, v|
+  puts("%10d %s" % [v.to_bcc_value, k.to_bcc_value.inspect])
+end
+```
+
+Things to learn:
+
+1. ```PT_REGS_PARM1(ctx)```: This fetches the first argument to ```strlen()```, which is the string.
+1. ```b.attach_uprobe(name: "c", sym: "strlen", fn_name: "count")```: Attach to library "c" (if this is the main program, use its pathname), instrument the user-level function ```strlen()```, and on execution call our C function ```count()```.
+1. For ```BPF_HASH```, you should call ```k/v.to_bcc_value``` to iterate in Ruby block. This behavior is Ruby specific and would be changed in the future.
