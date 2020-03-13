@@ -346,3 +346,10 @@ Things to learn:
 1. ```b["events"].event(data)```: Now get the event as a Ruby object, auto-generated from the C declaration.
 1. ```b["events"].open_perf_buffer(&print_event)```: Associate the proc ```print_event``` with the ```events``` stream.
 1. ```loop { b.perf_buffer_poll() }```: Block waiting for events.
+
+### Lesson 8. sync_perf_output.rb
+
+Rewrite sync_timing.rb, from a prior lesson, to use ```BPF_PERF_OUTPUT```.
+
+Example is at [answers/08-sync_perf_output.rb](answers/08-sync_perf_output.rb).
+
