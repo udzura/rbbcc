@@ -14,6 +14,20 @@ module RbBCC
 
   class BCC
     class << self
+      def _find_file(filename)
+        if filename
+          unless File.exist?(filename)
+            t = File.expand_path "../#{filename}", $0
+            if File.exist?(t)
+              filename = t
+            else
+              raise "Could not find file #{filename}"
+            end
+          end
+        end
+        return filename
+      end
+
       def ksym(addr, show_module: false, show_offset: false)
         self.sym(addr, -1, show_module: show_module, show_offset: show_offset, demangle: false)
       end
@@ -163,23 +177,37 @@ module RbBCC
       end
     end
 
-    def initialize(text:, debug: 0, cflags: [], usdt_contexts: [], allow_rlimit: 0)
+    def initialize(text: "", src_file: nil, hdr_file: nil, debug: 0, cflags: [], usdt_contexts: [], allow_rlimit: 0)
       @kprobe_fds = {}
       @uprobe_fds = {}
       @tracepoint_fds = {}
       @raw_tracepoint_fds = {}
-      @usdt_contexts = usdt_contexts
-      if code = gen_args_from_usdt
-        text = code + text
+
+      if src_file
+        src_file = BCC._find_file(src_file)
+        hdr_file = BCC._find_file(hdr_file)
       end
 
-      @module = Clib.bpf_module_create_c_from_string(
-        text,
-        debug,
-        cflags.pack('p*'),
-        cflags.size,
-        allow_rlimit
-      )
+      if src_file && src_file.end_with?(".b")
+        @module = Clib.bpf_module_create_b(src_file, hdr_file, debug, device)
+      else
+        if src_file
+          text = File.read(src_file)
+        end
+
+        @usdt_contexts = usdt_contexts
+        if code = gen_args_from_usdt
+          text = code + text
+        end
+
+        @module = Clib.bpf_module_create_c_from_string(
+          text,
+          debug,
+          cflags.pack('p*'),
+          cflags.size,
+          allow_rlimit
+        )
+      end
       @funcs = {}
       @tables = {}
       @perf_buffers = {}

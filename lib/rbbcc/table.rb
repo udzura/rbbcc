@@ -78,7 +78,9 @@ module RbBCC
       return next_key
     end
 
-    def [](key)
+    def [](_key)
+      key = normalize_key(_key)
+
       leaf = Fiddle::Pointer.malloc(self.leafsize)
       res = Clib.bpf_lookup_elem(self.map_fd, key, leaf)
       if res < 0
@@ -91,7 +93,8 @@ module RbBCC
       self[key] || raise(KeyError, "key not found")
     end
 
-    def []=(key, leaf)
+    def []=(_key, leaf)
+      key = normalize_key(_key)
       res = Clib.bpf_update_elem(self.map_fd, key, leaf, 0)
       if res < 0
         raise SystemCallError.new("Could not update table", Fiddle.last_error)
@@ -180,6 +183,17 @@ module RbBCC
     end
 
     private
+    def normalize_key(key)
+      case key
+      when Fiddle::Pointer
+        key
+      when Integer
+        byref(key, keysize)
+      else
+        raise KeyError, "#{key.inspect} must be integer or pointor"
+      end
+    end
+
     def byref(value, size=sizeof("int"))
       pack_fmt = case size
                  when sizeof("int") ; "i!"
@@ -207,14 +221,6 @@ module RbBCC
     end
     alias length size
 
-    def [](key)
-      super(normalize_key(key))
-    end
-
-    def []=(key, value)
-      super(normalize_key(key), value)
-    end
-
     def clearitem(key)
       self[key] = byref(0, @leafsize)
     end
@@ -227,18 +233,6 @@ module RbBCC
     def each(&b)
       each_value do |v|
         b.call(v.to_bcc_value)
-      end
-    end
-
-    private
-    def normalize_key(key)
-      case key
-      when Fiddle::Pointer
-        key
-      when Integer
-        byref(key, keysize)
-      else
-        raise KeyError, "#{key.inspect} must be integer or pointor"
       end
     end
   end
