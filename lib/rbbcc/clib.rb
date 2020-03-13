@@ -45,6 +45,7 @@ module RbBCC
     typealias "size_t", "int"
 
     extern 'void * bpf_module_create_c_from_string(char *, unsigned int, char **, int, long)'
+    extern 'void * bpf_module_create_b(char *filename, char *proto_filename, unsigned int flags, char *dev_name)'
     extern 'int bpf_num_functions(void *)'
     extern 'char * bpf_function_name(void *, int)'
     extern 'void bpf_module_destroy(void *)'
