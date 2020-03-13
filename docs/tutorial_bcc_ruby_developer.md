@@ -623,7 +623,8 @@ end
 puts("%10s %s" % ["COUNT", "STRING"])
 counts = b.get_table("counts")
 counts.items.sort_by{|k, v| v.to_bcc_value }.each do |k, v|
-  puts("%10d %s" % [v.to_bcc_value, k.to_bcc_value.inspect])
+  # unpack following definition of struct key_t above
+  puts("%10d %s" % [v.to_bcc_value, k[0, k.size].unpack("Z*")[0]])
 end
 ```
 

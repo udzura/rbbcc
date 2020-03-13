@@ -1,7 +1,7 @@
 require 'rbbcc'
 include RbBCC
 
-if ARGV.size != 1 :
+if ARGV.size != 1
   print("USAGE: #{$0} PID")
   exit()
 end
