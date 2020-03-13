@@ -540,3 +540,11 @@ print fmt: "got_bits %d nonblocking_pool_entropy_left %d input_entropy_left %d",
 ```
 
 In this case, we were printing the ```got_bits``` member.
+
+### Lesson 13. disksnoop.rb fixed
+
+Convert disksnoop.rb from a previous lesson to use the ```block:block_rq_issue``` and ```block:block_rq_complete``` tracepoints.
+
+Example is at [answers/13-disksnoop_fixed.rb](answers/13-disksnoop_fixed.rb).
+
+
