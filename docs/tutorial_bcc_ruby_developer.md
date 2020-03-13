@@ -418,3 +418,9 @@ New things to learn:
 1. ```dist.increment()```: Increments the histogram bucket index provided as first argument by one by default. Optionally, custom increments can be passed as the second argument.
 1. ```bpf_log2l()```: Returns the log-2 of the provided value. This becomes the index of our histogram, so that we're constructing a power-of-2 histogram.
 1. ```b["dist"].print_log2_hist("kbytes")```: Prints the "dist" histogram as power-of-2, with a column header of "kbytes". The only data transferred from kernel to user space is the bucket counts, making this efficient.
+
+### Lesson 10. disklatency.rb
+
+Write a program that times disk I/O, and prints a histogram of their latency. Disk I/O instrumentation and timing can be found in the disksnoop.rb program from a prior lesson, and histogram code can be found in bitehist.rb from a prior lesson.
+
+Example is at [answers/10-disklatency.rb](answers/10-disklatency.rb).
