@@ -690,3 +690,82 @@ Things to learn:
 1. ```u = USDT.new(pid: pid.to_i)```: Initialize USDT tracing for the given PID.
 1. ```u.enable_probe(probe: "http__server__request", fn_name: "do_trace")```: Attach our ```do_trace()``` BPF C function to the Node.js ```http__server__request``` USDT probe.
 1. ```b = BCC.new(text: bpf_text, usdt_contexts: [u])```: Need to pass in our USDT object, ```u```, to BPF object creation.
+
+### Lesson 16. task_switch.c
+
+This is an older tutorial included as a bonus lesson. Use this for recap and to reinforce what you've already learned.
+
+This is a slightly more complex tracing example than Hello World. This program
+will be invoked for every task change in the kernel, and record in a BPF map
+the new and old pids.
+
+The C program below introduces a new concept: the prev argument. This
+argument is treated specially by the BCC frontend, such that accesses
+to this variable are read from the saved context that is passed by the
+kprobe infrastructure. The prototype of the args starting from
+position 1 should match the prototype of the kernel function being
+kprobed. If done so, the program will have seamless access to the
+function parameters.
+
+```c
+#include <uapi/linux/ptrace.h>
+#include <linux/sched.h>
+
+struct key_t {
+    u32 prev_pid;
+    u32 curr_pid;
+};
+
+BPF_HASH(stats, struct key_t, u64, 1024);
+int count_sched(struct pt_regs *ctx, struct task_struct *prev) {
+    struct key_t key = {};
+    u64 zero = 0, *val;
+
+    key.curr_pid = bpf_get_current_pid_tgid();
+    key.prev_pid = prev->pid;
+
+    // could also use `stats.increment(key);`
+    val = stats.lookup_or_try_init(&key, &zero);
+    if (val) {
+      (*val)++;
+    }
+    return 0;
+}
+```
+
+The userspace component loads the file shown above, and attaches it to the
+`finish_task_switch` kernel function.
+The `[]` operator of the BPF object gives access to each BPF_HASH in the
+program, allowing pass-through access to the values residing in the kernel. Use
+the object as you would any other python dict object: read, update, and deletes
+are all allowed.
+
+```ruby
+require 'rbbcc'
+include RbBCC
+
+b = BCC.new(src_file: "16-task_switch.c")
+b.attach_kprobe(event: "finish_task_switch", fn_name: "count_sched")
+
+# generate many schedule events
+100.times { sleep 0.01 }
+
+b["stats"].each do |_k, v|
+  k = _k[0, 8].unpack("i! i!") # Handling pointer without type!!
+  puts("task_switch[%5d->%5d]=%u" % [k[0], k[1], v.to_bcc_value])
+end
+```
+
+These programs can be found in the files [answers/16-task_switch.c](answers/16-task_switch.c) and [answers/16-task_switch.rb](answers/16-task_switch.rb) respectively.
+
+### Lesson 17. Further Study
+
+For further study, see [BCC original docs](https://github.com/iovisor/bcc/tree/master/docs) and Sasha Goldshtein's [linux-tracing-workshop](https://github.com/goldshtn/linux-tracing-workshop), which contains additional labs. There are also many tools in rbbcc/bcc /tools to study.
+
+Please read [CONTRIBUTING-SCRIPTS.md](../CONTRIBUTING-SCRIPTS.md) if you wish to contrubite tools to rbbcc. At the bottom of the main [README.md](../README.md), you'll also find methods for contacting us. Good luck, and happy tracing!
+
+---
+
+## Networking
+
+To do.
