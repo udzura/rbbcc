@@ -185,3 +185,11 @@ Things to learn (all in C):
 1. ```last.update(&key, &ts)```: Associate the value in the 2nd argument to the key, overwriting any previous value. This records the timestamp.
 
 *Note for RbBCC developers:* Type of `trace_fields` return values differ from python's This should be fixed.
+
+### Lesson 5. sync_count.py
+
+Modify the sync_timing.rb program (prior lesson) to store the count of all kernel sync system calls (both fast and slow), and print it with the output. This count can be recorded in the BPF program by adding a new key index to the existing hash.
+
+One of sample implementation is at [answers/05-sync_count.rb](answers/05-sync_count.rb).
+
+
