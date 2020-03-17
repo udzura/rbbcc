@@ -175,6 +175,23 @@ module RbBCC
         module_ = (show_module && module_) ? " [#{File.basename.basename(module_)}]" : ""
         return name + module_
       end
+
+      def attach_raw_socket(fn, dev)
+        unless fn.is_a?(Hash)
+          raise "arg 1 must be of BPF.Function Hash"
+        end
+        sock = Clib.bpf_open_raw_sock(dev)
+        if sock < 0
+          raise SystemCallError.new("Failed to open raw device %s" % dev, Fiddle.last_error)
+        end
+
+        res = Clib.bpf_attach_socket(sock, fn[:fd])
+        if res < 0
+          raise SystemCallError.new("Failed to attach BPF to device %s" % dev, Fiddle.last_error)
+        end
+        fn[:sock] = sock
+        fn
+      end
     end
 
     def initialize(text: "", src_file: nil, hdr_file: nil, debug: 0, cflags: [], usdt_contexts: [], allow_rlimit: 0)
