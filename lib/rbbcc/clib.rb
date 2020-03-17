@@ -156,6 +156,9 @@ module RbBCC
     extern 'int perf_reader_poll(int num_readers, struct perf_reader **readers, int timeout)'
 
     extern 'void bcc_procutils_free(const char *ptr)'
+
+    extern 'int bpf_open_raw_sock(const char *name)'
+    extern 'int bpf_attach_socket(int sockfd, int progfd)'
   end
 end
 
