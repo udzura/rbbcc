@@ -194,7 +194,7 @@ end
 
 ### Lesson 6. disksnoop.rb
 
-[answers/06-disksnoop.rb](answers/06-disksnoop.rb) を見て見ましょう。これがサンプル出力です:
+[answers/06-disksnoop.rb](answers/06-disksnoop.rb) を見てみましょう。これがサンプル出力です:
 
 ```
 # bundle exec answers/06-disksnoop.rb
@@ -252,13 +252,13 @@ b.attach_kprobe(event: "blk_account_io_completion", fn_name: "trace_completion")
 1. ```REQ_WRITE```: カーネル関数をRubyのプログラムの中で定義し、後ろで利用しています。BPFのプログラムの中で REQ_WRITE 定数を使う場合、 `#include` で適切なヘッダを読み込むことで、自分で定義しなくても動作するでしょう。
 1. ```trace_start(struct pt_regs *ctx, struct request *req)```: この関数はあとでkprobeにアタッチします。このkprobe用の関数の最初の引数は ```struct pt_regs *ctx``` で、BPFのコンテクストを表します。第2引数以降で実際のカーネル関数の引数を列挙します。今回はこれを blk_start_request() に割り当てる予定で、これの最初の引数の型は ```struct request *``` です。
 1. ```start.update(&req, &ts)```: ```struct request``` へのポインタをHashのkeyに使っています。どういうことか？ トレーシングでよく使う技です。構造体のポインタはkeyとしてふさわしいもので、なぜならその値はユニークだからです: 2つの構造体は同じポインタアドレスを持たないため。(freeされてアドレスが再利用される場合にだけは注意しましょう。)なので、私たちがここでしたいのは単にリクエストにタグを打ちたいだけで、それぞれのリクエストはdisk I/Oの詳細を記述しており、それごとにタイムスタンプを発行することで間隔を計測します。ちなみにタイムスタンプを格納する上では2つのkeyが使えます: 構造体のポインタと、Thread ID(特に、関数の開始とreturnまでを計測する場合)です。
-1. ```req->__data_len```: We're dereferencing members of ```struct request```. カーネルのソースコードを見てメンバが何か確認しましょう。 bcc は実際にはこれらの表現は ```bpf_probe_read()``` の呼び出しに置換しています。時として、複雑なデリファレンスには対応できないので、 ```bpf_probe_read()``` を直接呼び必要があるでしょう。
+1. ```req->__data_len```: ```struct request```のメンバをデリファレンスしています。カーネルのソースコードを見てメンバが何か確認しましょう。 bcc は実際にはこれらの表現は ```bpf_probe_read()``` の呼び出しに置換しています。時として、複雑なデリファレンスには対応できないので、 ```bpf_probe_read()``` を直接呼び必要があるでしょう。
 
 これは大変面白いプログラムで、このコードの理解ができたのなら、多くの重要な基本を理解したと言えるでしょう。なお、いまだに bpf_trace_printk() を利用していますので、次でそれを修正しましょう。
 
 ### Lesson 7. hello_perf_output.rb
 
-Let's finally stop using bpf_trace_printk() and use the proper BPF_PERF_OUTPUT() interface. This will also mean we stop getting the free trace_field() members like PID and timestamp, and will need to fetch them directly. Sample output while commands are run in another session:
+いよいよ、 `bpf_trace_printk()` の利用をやめ、適切な `BPF_PERF_OUTPUT()` インタフェースを使うようにしましょう。これは、 `trace_field()` がデフォルトで付与してくれるPIDやタイムスタンプなどの情報を自分で直接取得することを意味します。これが別のターミナルでコマンドを実行しながらのサンプルのアウトプットです。
 
 ```
 # bundle exec answers/07-hello_perf_output.rb
@@ -270,7 +270,7 @@ TIME(s)            COMM             PID    MESSAGE
 [...]
 ```
 
-Code is [answers/07-hello_perf_output.rb](answers/07-hello_perf_output.rb):
+コードは [answers/07-hello_perf_output.rb](answers/07-hello_perf_output.rb) です:
 
 ```ruby
 #!/usr/bin/env ruby
@@ -334,24 +334,24 @@ loop do
 end
 ```
 
-Things to learn:
+学ぶべきこと:
 
-1. ```struct data_t```: This defines the C struct we'll use to pass data from kernel to user space.
-1. ```BPF_PERF_OUTPUT(events)```: This names our output channel "events".
-1. ```struct data_t data = {};```: Create an empty data_t struct that we'll then populate.
-1. ```bpf_get_current_pid_tgid()```: Returns the process ID in the lower 32 bits (kernel's view of the PID, which in user space is usually presented as the thread ID), and the thread group ID in the upper 32 bits (what user space often thinks of as the PID). By directly setting this to a u32, we discard the upper 32 bits. Should you be presenting the PID or the TGID? For a multi-threaded app, the TGID will be the same, so you need the PID to differentiate them, if that's what you want. It's also a question of expectations for the end user.
-1. ```bpf_get_current_comm()```: Populates the first argument address with the current process name.
-1. ```events.perf_submit()```: Submit the event for user space to read via a perf ring buffer.
-1. ```print_event = lambda { ... }```: Define a Ruby proc(lambda) that will handle reading events from the ```events``` stream; BTW unlike Python, you can pass block directory to method `open_perf_buffer`.
-1. ```b["events"].event(data)```: Now get the event as a Ruby object, auto-generated from the C declaration.
-1. ```b["events"].open_perf_buffer(&print_event)```: Associate the proc ```print_event``` with the ```events``` stream.
-1. ```loop { b.perf_buffer_poll() }```: Block waiting for events.
+1. ```struct data_t```: これは、カーネルからユーザースペースに渡すデータの構造を宣言しています。
+1. ```BPF_PERF_OUTPUT(events)```: 私たちが今から使うチャンネルを "events" と名付けています。
+1. ```struct data_t data = {};```: 空の `data_t` 構造体を作成し、その後中身を埋めます。
+1. ```bpf_get_current_pid_tgid()```: 下位の32bitで、「プロセスID/PID」を返します(カーネルから見たPIDです。ユーザスペースからは、一般にスレッドIDと呼ばれます)。そしてスレッドグループID/TGIDは上位32bitに含まれています(これは、ユーザスペースで言うところのPIDです)。この関数を返り値をu32型の変数に格納すると、上位の32bit分は破棄されます。PIDとTGIDのどちらを利用すべきでしょうか？ マルチスレッドなアプリケーションでは、どのスレッドもTGIDは同じはずです。したがってもし必要であればPIDで区別する必要があります。そしてこれはツールのエンドユーザーが予期しているところでもあるでしょう。
+1. ```bpf_get_current_comm()```: 最初の引数のポインタアドレスに現在のプロセス名を格納します。
+1. ```events.perf_submit()```: perfのリングバッファを経由して、イベントをユーザスペースに送信します。
+1. ```print_event = lambda { ... }```: ```events``` ストリームから流れてくるイベントをハンドルするRubyのprocオブジェクト(lamnbda)を定義します; ところでPythonと違い、Ruby版の `Table#open_perf_buffer` は直接ブロックを受け取ることもできます :)
+1. ```b["events"].event(data)```: ここで、Cの定義から自動生成したRubyのオブジェクトとして、イベントデータを受け取ります。
+1. ```b["events"].open_perf_buffer(&print_event)```: proc ```print_event``` を ```events``` と関連づけます。
+1. ```loop { b.perf_buffer_poll() }```: イベントが来るのを待ち構えます。
 
 ### Lesson 8. sync_perf_output.rb
 
-Rewrite sync_timing.rb, from a prior lesson, to use ```BPF_PERF_OUTPUT```.
+前のレッスンのsync_timing.rbを、 ```BPF_PERF_OUTPUT``` を使うよう書き換えてください。
 
-Example is at [answers/08-sync_perf_output.rb](answers/08-sync_perf_output.rb).
+回答例はこちら: [answers/08-sync_perf_output.rb](answers/08-sync_perf_output.rb).
 
 ### Lesson 9. bitehist.rb
 
