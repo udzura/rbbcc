@@ -115,16 +115,16 @@ This is similar to hello_world.rb, and traces new processes via sys_clone() agai
 
 1. ```b.attach_kprobe(event: b.get_syscall_fnname("clone"), fn_name: "hello")```: Creates a kprobe for the kernel clone system call function, which will execute our defined hello() function. You can call attach_kprobe() more than once, and attach your C function to multiple kernel functions.
 
-1. ```b.trace_fields do |...|```: Loop wirth a fixed set of fields from trace_pipe(without blcok, this method just returns the same set of fields). Similar to trace_print(), this is handy for hacking, but for real tooling we should switch to BPF_PERF_OUTPUT().
+1. ```b.trace_fields do |...|```: Loop with a fixed set of fields from trace_pipe(without blcok, this method just returns the same set of fields). Similar to trace_print(), this is handy for hacking, but for real tooling we should switch to BPF_PERF_OUTPUT().
 
-### Lesson 4. sync_timing.py
+### Lesson 4. sync_timing.rb
 
 Remember the days of sysadmins typing ```sync``` three times on a slow console before ```reboot```, to give the first asynchronous sync time to complete? Then someone thought ```sync;sync;sync``` was clever, to run them all on one line, which became industry practice despite defeating the original purpose! And then sync became synchronous, so more reasons it was silly. Anyway.
 
 The following example times how quickly the ```do_sync``` function is called, and prints output if it has been called more recently than one second ago. A ```sync;sync;sync``` will print output for the 2nd and 3rd sync's:
 
 ```
-# ./examples/tracing/sync_timing.py
+# ruby answers/04-sync_timing.rb
 Tracing for quick sync's... Ctrl-C to end
 At time 0.00 s: multiple syncs detected, last 95 ms ago
 At time 0.10 s: multiple syncs detected, last 96 ms ago
@@ -186,7 +186,7 @@ Things to learn (all in C):
 
 *Note for RbBCC developers:* Type of `trace_fields` return values differ from python's This should be fixed.
 
-### Lesson 5. sync_count.py
+### Lesson 5. sync_count.rb
 
 Modify the sync_timing.rb program (prior lesson) to store the count of all kernel sync system calls (both fast and slow), and print it with the output. This count can be recorded in the BPF program by adding a new key index to the existing hash.
 

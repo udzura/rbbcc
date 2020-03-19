@@ -45,13 +45,13 @@ Attach: p___x64_sys_clone
 
 ### Lesson 2. sys_sync()
 
-Write a program that traces the sys_sync() kernel function. Print "sys_sync() called" when it runs. Test by running ```sync``` in another session while tracing. The hello_world.rb program has everything you need for this.
+カーネル関数 `sys_sync()` をトレースするプログラムを書きましょう。実行のたびに "sys_sync() called" をプリントします。トレース中別のターミナルで ```sync``` コマンドを打てばテストできます。さきほどの `hello_world.rb` に必要なものが全て書かれています。
 
-Improve it by printing "Tracing sys_sync()... Ctrl-C to end." when the program first starts. Hint: it's just Ruby and you can rescue `Interrupt` exception.
+プログラム起動時に "Tracing sys_sync()... Ctrl-C to end." と出力して、改善しましょう。ヒント: これはただの Ruby プログラムで、Ctrl-Cを押したときに投げられる `Interrupt` 例外を rescue できるはずです。
 
-On of the answer example is: [answers/02-sys_sync.rb](answers/02-sys_sync.rb)
+回答例の一つです: [answers/02-sys_sync.rb](answers/02-sys_sync.rb)
 
-Tips: how to call `sync(2)` explicitly via Ruby; or just type `sync` at your terminal:
+Tipsとして、システムコール `sync(2)` を明示的にRubyから呼ぶことも可能です:
 
 ```console
 # ausyscall sync 
@@ -61,7 +61,7 @@ sync               162
 
 ### Lesson 3. hello_fields.rb
 
-This program is in [answers/03-hello_fields.rb](answers/03-hello_fields.rb). Sample output (run commands in another session):
+プログラムは: [answers/03-hello_fields.rb](answers/03-hello_fields.rb). アウトプットのサンプル (コマンドを別のターミナルで打つこと):
 
 ```
 # bundle exec ruby ./docs/answers/03-hello_fields.rb
@@ -72,7 +72,7 @@ TIME(s)            COMM             PID    MESSAGE
 24585002.276147000 bash             15787  Hello, World!
 ```
 
-Code:
+コードは:
 
 ```ruby
 require "rbbcc"
@@ -107,30 +107,30 @@ rescue => e
 end
 ```
 
-This is similar to hello_world.rb, and traces new processes via sys_clone() again, but has a few more things to learn:
+これは hello_world.rb に近いもので、 sys_clone() 経由で新しいプロセスをトレースします。しかしいくつか新しい要素があります:
 
-1. ```prog:```: This time we declare the C program as a variable, and later refer to it. This is useful if you want to add some string substitutions based on command line arguments.
+1. ```prog:```: 今回私たちは、Cプログラムを変数に格納し、あとで参照しました。これは、 `String#sub!` などで（例えばコマンドラインの入力をもとに）文字列を操作する際に便利でしょう。
 
-1. ```hello()```: Now we're just declaring a C function, instead of the ```kprobe__``` shortcut. We'll refer to this later. All C functions declared in the BPF program are expected to be executed on a probe, hence they all need to take a ```pt_reg* ctx``` as first argument. If you need to define some helper function that will not be executed on a probe, they need to be defined as ```static inline``` in order to be inlined by the compiler. Sometimes you would also need to add ```_always_inline``` function attribute to it.
+1. ```hello()```: いま、私たちはCの関数を ```kprobe__``` ショートカットなしで宣言しました。後ほど説明します。BPFプログラムで宣言されたどのC関数も、probeの際に実行されることを意図されます。そのため ```pt_reg* ctx``` という変数を最初の引数に指定する必要があります。もしprobeでは実行されることのないヘルパー関数を定義する必要があれば、 ```static inline``` を宣言してコンパイラにインライン化をしてもらう必要があるでしょう。場合により ```_always_inline``` という関数attributeを指定する必要もあるでしょう。
 
-1. ```b.attach_kprobe(event: b.get_syscall_fnname("clone"), fn_name: "hello")```: Creates a kprobe for the kernel clone system call function, which will execute our defined hello() function. You can call attach_kprobe() more than once, and attach your C function to multiple kernel functions.
+1. ```b.attach_kprobe(event: b.get_syscall_fnname("clone"), fn_name: "hello")```: カーネルのcloneシステムコール関数からkprobeをつくり、先ほど定義した hello() を登録、実行させます。 attach_kprobe() を複数回呼び出して、BPF内の関数を複数のカーネル関数とひもづけることも可能です。
 
-1. ```b.trace_fields do |...|```: Loop wirth a fixed set of fields from trace_pipe(without blcok, this method just returns the same set of fields). Similar to trace_print(), this is handy for hacking, but for real tooling we should switch to BPF_PERF_OUTPUT().
+1. ```b.trace_fields do |...|```: trace_pipe を一行読みこんだ内容をブロック引数に格納したループを回します(ブロックなしの場合、 readline() のように読み込んだ返り値のセットを返却します)。trace_print() に近いですがこちらの方がアウトプットの加工には便利です。現実的なツールには `BPF_PERF_OUTPUT()` を使いましょう。
 
-### Lesson 4. sync_timing.py
+### Lesson 4. sync_timing.rb
 
-Remember the days of sysadmins typing ```sync``` three times on a slow console before ```reboot```, to give the first asynchronous sync time to complete? Then someone thought ```sync;sync;sync``` was clever, to run them all on one line, which became industry practice despite defeating the original purpose! And then sync became synchronous, so more reasons it was silly. Anyway.
+思い出しましょう、システム管理者が ```reboot``` をする前に、 ```sync``` を3回、遅いコンソールに打ち込んでいた時代を...。それにより最初の非同期なsyncを確実に完了させていたのでしょうかね？ しかしそれから、誰かが ```sync;sync;sync``` の方がスマートだと思いついて、一行で全てを実行するプラクティスが普及しました。最初の目的がダメになってしまうにうも関わらず！ さらにその後、 sync コマンドは同期的になり、さらに色々な理由でこのプラクティスは馬鹿げたものになりました。やれやれ。
 
-The following example times how quickly the ```do_sync``` function is called, and prints output if it has been called more recently than one second ago. A ```sync;sync;sync``` will print output for the 2nd and 3rd sync's:
+この後のサンプルは、どれだけ素早い間隔で ```do_sync``` が呼び出されたかを計測し、もし1秒よりも感覚が小さかったらそれをプリントするものです。```sync;sync;sync``` などと打った場合は2番目と3番目のsyncを表示してくれることでしょう:
 
 ```
-# ./examples/tracing/sync_timing.py
+# ruby ./answers/04-sync_timing.rb
 Tracing for quick sync's... Ctrl-C to end
 At time 0.00 s: multiple syncs detected, last 95 ms ago
 At time 0.10 s: multiple syncs detected, last 96 ms ago
 ```
 
-This program is [answers/04-sync_timing.rb](answers/04-sync_timing.rb):
+プログラムは [answers/04-sync_timing.rb](answers/04-sync_timing.rb):
 
 ```ruby
 require "rbbcc"
@@ -175,22 +175,22 @@ b.trace_fields do |task, pid, cpu, flags, ts, ms|
 end
 ```
 
-Things to learn (all in C):
+この回の学びです(全部 C の話です):
 
-1. ```bpf_ktime_get_ns()```: Returns the time as nanoseconds.
-1. ```BPF_HASH(last)```: Creates a BPF map object that is a hash (associative array), called "last". We didn't specify any further arguments, so it defaults to key and value types of u64.
-1. ```key = 0```: We'll only store one key/value pair in this hash, where the key is hardwired to zero.
-1. ```last.lookup(&key)```: Lookup the key in the hash, and return a pointer to its value if it exists, else NULL. We pass the key in as an address to a pointer.
-1. ```last.delete(&key)```: Delete the key from the hash. This is currently required because of [a kernel bug in `.update()`](https://git.kernel.org/cgit/linux/kernel/git/davem/net.git/commit/?id=a6ed3ea65d9868fdf9eff84e6fe4f666b8d14b02).
-1. ```last.update(&key, &ts)```: Associate the value in the 2nd argument to the key, overwriting any previous value. This records the timestamp.
+1. ```bpf_ktime_get_ns()```: 今のカーネル内時間をナノ秒の解像度で返します。
+1. ```BPF_HASH(last)```: BPF map を、Hash（連想配列）オブジェクトとして作成します。 ```"last"``` という名前です。今回は追加の引数を指定しませんので、 u64 型のkeyとvalueで定義されます。
+1. ```key = 0```: このkey/valueストアには一つのペアしか登録しません。なので `0` でハードコーディングします。
+1. ```last.lookup(&key)```: Hashからkeyを探し、存在したらvalueへのポインタを、なければ `NULL` を返します。keyもポインタとして渡してください。
+1. ```last.delete(&key)```: Hashから指定したkeyを削除します。現在は [カーネルの `.update()` のバグがあるので](https://git.kernel.org/cgit/linux/kernel/git/davem/net.git/commit/?id=a6ed3ea65d9868fdf9eff84e6fe4f666b8d14b02) 、念のため必要です。
+1. ```last.update(&key, &ts)```: keyと2番目の引数のvalueを関連づけ、それまでのvalueを上書きします。このレコードはタイムスタンプですね。
 
-*Note for RbBCC developers:* Type of `trace_fields` return values differ from python's This should be fixed.
+*Note for RbBCC developers:* `trace_fields` メソッドの返り値がPython版と微妙に違うので直した方がいいです。
 
-### Lesson 5. sync_count.py
+### Lesson 5. sync_count.rb
 
-Modify the sync_timing.rb program (prior lesson) to store the count of all kernel sync system calls (both fast and slow), and print it with the output. This count can be recorded in the BPF program by adding a new key index to the existing hash.
+先ほどのレッスンの sync_timing.rb を変更し、すべての sync システムコールの呼び出し回数を保存するようにしましょう（早い遅いに関わらず）。そして出力しましょう。このカウントアップはBPFプログラム中の、いまあるHashの新しいキーを導入することで記録できるでしょう。
 
-One of sample implementation is at [answers/05-sync_count.rb](answers/05-sync_count.rb).
+回答例の一つは [answers/05-sync_count.rb](answers/05-sync_count.rb) です。
 
 ### Lesson 6. disksnoop.rb
 
