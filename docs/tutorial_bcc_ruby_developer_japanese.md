@@ -1,26 +1,26 @@
 # RbBCC Ruby Developer Tutorial
 
-* Original Python version is [at BCC's repo](https://github.com/iovisor/bcc/blob/master/docs/tutorial_bcc_python_developer.md)
-* This Ruby version of tutorial follows the license of BCC.
+* オリジナルの Python バージョンは [BCC本家のリポジトリ](https://github.com/iovisor/bcc/blob/master/docs/tutorial_bcc_python_developer.md) にあります。
+* この Ruby 版チュートリアルは、日本語版も含め BCC のライセンスに従います。
 
 ---
 
-This tutorial is about developing bcc tools and programs using the Ruby interface, using [RbBCC](https://github.com/udzura/rbbcc/). In this time the part of observability is implemented. Snippets are taken from various programs in [bcc](https://github.com/iovisor/bcc/tree/master/tools): see their files for licences. And we have implemented their Ruby versions and put them on [`answers/`](answers/).
+このチュートリアルは [RbBCC](https://github.com/udzura/rbbcc/) を用いて、Rubyのインタフェースにより bcc のツールを開発するためのチュートリアルです。今回は「可観測性」のパートのみが執筆されています。コードスニペットは [bcc](https://github.com/iovisor/bcc/tree/master/tools) の各所のものを参考にしています: ぜひそれらのライセンスも参照してください。そして、私たちはそれらの Ruby バージョンを [`answers/`](answers/) リポジトリに配置しています。
 
-Also see the bcc developer's [reference_guide.md](https://github.com/iovisor/bcc/blob/master/docs/reference_guide.md#bpf-c) for C interface.
+同時に、 bcc 開発者の [リファレンスガイド](https://github.com/iovisor/bcc/blob/master/docs/reference_guide.md#bpf-c) も参照し、 C のインターフェースも理解してください。
 
-There is also Python and lua interface for bcc. See original.
+また、 Python と Lua の bcc インターフェースもあるので、 bcc のオリジナルを参照してください。
 
-## Observability
+## Observability - 可観測性
 
-This observability tutorial contains 17 lessons, and XX enumerated things to learn.
+この可観測性のチュートリアルは 17 のレッスンを含んでいます。
 
 ### Lesson 1. Hello World
 
-Start by running [answers/01-hello-world.rb](answers/01-hello-world.rb), while running some commands (eg, "ls") in another session. It should print "Hello, World!" for new processes. If not, start by fixing bcc: see [BCC's INSTALL.md](https://github.com/iovisor/bcc/blob/master/INSTALL.md) and [rbbcc getting started](getting_started.md).
+[answers/01-hello-world.rb](answers/01-hello-world.rb) を実行しましょう。そして、別のターミナルセッションでいくつかコマンドを（例: `"ls"` ）発行しましょう。プロセスを作るたびに「`Hello, World!`」がプリントされるはずです。もし出ない場合、bccのインストールに問題があるでしょう: [BCCの INSTALL.md](https://github.com/iovisor/bcc/blob/master/INSTALL.md) と [rbbcc getting started](getting_started.md) を見てください。
 
 ```bash
-## If you're running rbbcc in bundled environment, follow this command after `bundle exec'
+## もし bundler の環境で実行しているのなら、 `bundle exec' をつけてください。
 # ruby answers/01-hello-world.rb
 Found fnc: kprobe__sys_clone
 Attach: p___x64_sys_clone
@@ -29,19 +29,19 @@ Attach: p___x64_sys_clone
             bash-17950 [000] .... 244114.080360: 0: Hello, World!
 ```
 
-There are six things to learn from this:
+6つの学ぶべきことがあります:
 
-1. ```text: '...'```: This defines a BPF program inline. The program is written in C.
+1. ```text: '...'```: これは BPF プログラムをインラインで定義しています。このプログラムは、Cで書きます。
 
-1. ```kprobe__sys_clone()```: This is a short-cut for kernel dynamic tracing via kprobes. If the C function begins with ``kprobe__``, the rest is treated as a kernel function name to instrument, in this case, ```sys_clone()```.
+1. ```kprobe__sys_clone()```: これはkprobeによるカーネルの動的トレーシングをするためのショートカット規約です。もし、Cの関数が ``kprobe__`` から開始していたら。残りは計測するカーネルの関数名として扱われます。この場合、 ```sys_clone()``` です。
 
-1. ```void *ctx```: ctx has arguments, but since we aren't using them here, we'll just cast it to ```void *```.
+1. ```void *ctx```: ctx は型があるのですが、今回は使わないので ```void *``` にキャストして捨てています。
 
-1. ```bpf_trace_printk()```: A simple kernel facility for printf() to the common trace_pipe (/sys/kernel/debug/tracing/trace_pipe). This is ok for some quick examples, but has limitations: 3 args max, 1 %s only, and trace_pipe is globally shared, so concurrent programs will have clashing output. A better interface is via BPF_PERF_OUTPUT(), covered later.
+1. ```bpf_trace_printk()```: シンプルなカーネルユーティリティで、 ```trace_pipe (/sys/kernel/debug/tracing/trace_pipe)``` に printf() をします。これは単純な例なら問題ないのですが、制限もあります: 引数が3つまで、 `%s` は1つまで、そして `trace_pipe` はマシングローバルであること。なので、並列実行のプログラムではアウトプットがクラッシュするでしょう。より良いインタフェースに `BPF_PERF_OUTPUT()` があり、後述します。
 
-1. ```return 0;```: Necessary formality (if you want to know why, see [bcc#139](https://github.com/iovisor/bcc/issues/139)).
+1. ```return 0;```: おまじないです（理由を詳しく知りたければ [bcc#139](https://github.com/iovisor/bcc/issues/139) まで）。
 
-1. ```Table#trace_print```: A bcc routine that reads trace_pipe and prints the output.
+1. ```Table#trace_print```: Ruby側の、trace_pipeを読み込んでアウトプットをプリントするメソッドです。
 
 ### Lesson 2. sys_sync()
 
