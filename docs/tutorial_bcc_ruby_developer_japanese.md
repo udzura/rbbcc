@@ -188,13 +188,13 @@ end
 
 ### Lesson 5. sync_count.rb
 
-先ほどのレッスンの sync_timing.rb を変更し、すべての sync システムコールの呼び出し回数を保存するようにしましょう（早い遅いに関わらず）。そして出力しましょう。このカウントアップはBPFプログラム中の、いまあるHashの新しいキーを導入することで記録できるでしょう。
+先ほどのレッスンの sync_timing.rb を変更し、すべての sync システムコールの呼び出し回数を保存するようにしましょう（早い遅いに関わらず）。そして出力しましょう。このカウントアップはBPFプログラムの中で、いまあるHashに新しいキーを導入することで記録できるでしょう。
 
 回答例の一つは [answers/05-sync_count.rb](answers/05-sync_count.rb) です。
 
 ### Lesson 6. disksnoop.rb
 
-Browse the [answers/06-disksnoop.rb](answers/06-disksnoop.rb) program to see what is new. Here is some sample output:
+[answers/06-disksnoop.rb](answers/06-disksnoop.rb) を見て見ましょう。これがサンプル出力です:
 
 ```
 # bundle exec answers/06-disksnoop.rb
@@ -206,7 +206,7 @@ TIME(s)            T  BYTES    LAT(ms)
 [...]
 ```
 
-And a code snippet:
+コードスニペットです:
 
 ```ruby
 require 'rbbcc'
@@ -247,14 +247,14 @@ b.attach_kprobe(event: "blk_account_io_completion", fn_name: "trace_completion")
 [...]
 ```
 
-Things to learn:
+今回の学習内容です:
 
-1. ```REQ_WRITE```: We're defining a kernel constant in the Ruby program because we'll use it there later. If we were using REQ_WRITE in the BPF program, it should just work (without needing to be defined) with the appropriate #includes.
-1. ```trace_start(struct pt_regs *ctx, struct request *req)```: This function will later be attached to kprobes. The arguments to kprobe functions are ```struct pt_regs *ctx```, for registers and BPF context, and then the actual arguments to the function. We'll attach this to blk_start_request(), where the first argument is ```struct request *```.
-1. ```start.update(&req, &ts)```: We're using the pointer to the request struct as a key in our hash. What? This is commonplace in tracing. Pointers to structs turn out to be great keys, as they are unique: two structs can't have the same pointer address. (Just be careful about when it gets free'd and reused.) So what we're really doing is tagging the request struct, which describes the disk I/O, with our own timestamp, so that we can time it. There's two common keys used for storing timestamps: pointers to structs, and, thread IDs (for timing function entry to return).
-1. ```req->__data_len```: We're dereferencing members of ```struct request```. See its definition in the kernel source for what members are there. bcc actually rewrites these expressions to be a series of ```bpf_probe_read()``` calls. Sometimes bcc can't handle a complex dereference, and you need to call ```bpf_probe_read()``` directly.
+1. ```REQ_WRITE```: カーネル関数をRubyのプログラムの中で定義し、後ろで利用しています。BPFのプログラムの中で REQ_WRITE 定数を使う場合、 `#include` で適切なヘッダを読み込むことで、自分で定義しなくても動作するでしょう。
+1. ```trace_start(struct pt_regs *ctx, struct request *req)```: この関数はあとでkprobeにアタッチします。このkprobe用の関数の最初の引数は ```struct pt_regs *ctx``` で、BPFのコンテクストを表します。第2引数以降で実際のカーネル関数の引数を列挙します。今回はこれを blk_start_request() に割り当てる予定で、これの最初の引数の型は ```struct request *``` です。
+1. ```start.update(&req, &ts)```: ```struct request``` へのポインタをHashのkeyに使っています。どういうことか？ トレーシングでよく使う技です。構造体のポインタはkeyとしてふさわしいもので、なぜならその値はユニークだからです: 2つの構造体は同じポインタアドレスを持たないため。(freeされてアドレスが再利用される場合にだけは注意しましょう。)なので、私たちがここでしたいのは単にリクエストにタグを打ちたいだけで、それぞれのリクエストはdisk I/Oの詳細を記述しており、それごとにタイムスタンプを発行することで間隔を計測します。ちなみにタイムスタンプを格納する上では2つのkeyが使えます: 構造体のポインタと、Thread ID(特に、関数の開始とreturnまでを計測する場合)です。
+1. ```req->__data_len```: We're dereferencing members of ```struct request```. カーネルのソースコードを見てメンバが何か確認しましょう。 bcc は実際にはこれらの表現は ```bpf_probe_read()``` の呼び出しに置換しています。時として、複雑なデリファレンスには対応できないので、 ```bpf_probe_read()``` を直接呼び必要があるでしょう。
 
-This is a pretty interesting program, and if you can understand all the code, you'll understand many important basics. We're still using the bpf_trace_printk() hack, so let's fix that next.
+これは大変面白いプログラムで、このコードの理解ができたのなら、多くの重要な基本を理解したと言えるでしょう。なお、いまだに bpf_trace_printk() を利用していますので、次でそれを修正しましょう。
 
 ### Lesson 7. hello_perf_output.rb
 
