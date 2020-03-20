@@ -696,19 +696,16 @@ b = BCC.new(text: bpf_text, usdt_contexts: [u])
 
 ### Lesson 16. task_switch.c
 
-This is an older tutorial included as a bonus lesson. Use this for recap and to reinforce what you've already learned.
+*これは古いチュートリアルで、ボーナスレッスンとして含めています。ここまでに学んだことの復習と強化のために活用してください。*
 
-This is a slightly more complex tracing example than Hello World. This program
-will be invoked for every task change in the kernel, and record in a BPF map
-the new and old pids.
+これはHello Worldよりはもう若干複雑なトレースで、
+このプログラムは実行タスクのスイッチがカーネルで行われるごとに実行されます。
+そして古いPIDと新しいPIDがBPF mapに記録されます。
 
-The C program below introduces a new concept: the prev argument. This
-argument is treated specially by the BCC frontend, such that accesses
-to this variable are read from the saved context that is passed by the
-kprobe infrastructure. The prototype of the args starting from
-position 1 should match the prototype of the kernel function being
-kprobed. If done so, the program will have seamless access to the
-function parameters.
+このCプログラムは新しいコンセプト: `prev` 引数を導入しています。
+この引数はBCCのフロントエンドから特別な扱いを受けます。この引数へのアクセスは。kprobeに渡されるセーブ済みのコンテクストから読み込まれます。
+関数のプロトタイプの2つ目の引数は、kprobeされているカーネル関数の最初の引数と一致する必要があります。
+そのように宣言されれば、プログラムはシームレスにカーネル関数のパラメータにアクセス可能です。
 
 ```c
 #include <uapi/linux/ptrace.h>
@@ -736,12 +733,11 @@ int count_sched(struct pt_regs *ctx, struct task_struct *prev) {
 }
 ```
 
-The userspace component loads the file shown above, and attaches it to the
-`finish_task_switch` kernel function.
-The `[]` operator of the BPF object gives access to each BPF_HASH in the
-program, allowing pass-through access to the values residing in the kernel. Use
-the object as you would any other python dict object: read, update, and deletes
-are all allowed.
+ユーザスペース側のコンポネントはCファイルを以下のように読み込み、
+`finish_task_switch` カーネル関数にアタッチします。
+BPFオブジェクトは `BCC#[]` を経由して、プログラムの BPF_HASH にそれぞれの名前でアクセスできます。
+これにより、カーネル側に存在する値にパススルーでアクセスが可能になります。
+取り出したオブジェクトはRubyのHashのように扱えます: each を実装した `Enumerable` で、また読み込み、更新、削除が全て可能です。
 
 ```ruby
 require 'rbbcc'
@@ -759,16 +755,16 @@ b["stats"].each do |_k, v|
 end
 ```
 
-These programs can be found in the files [answers/16-task_switch.c](answers/16-task_switch.c) and [answers/16-task_switch.rb](answers/16-task_switch.rb) respectively.
+これらのプログラムは2つのファイル [answers/16-task_switch.c](answers/16-task_switch.c) と [answers/16-task_switch.rb](answers/16-task_switch.rb) で確認できます。
 
 ### Lesson 17. Further Study
 
-For further study, see [BCC original docs](https://github.com/iovisor/bcc/tree/master/docs) and Sasha Goldshtein's [linux-tracing-workshop](https://github.com/goldshtn/linux-tracing-workshop), which contains additional labs. There are also many tools in rbbcc/bcc /tools to study.
+さらに学習したい場合、 [BCC のオリジナエルのドキュメント](https://github.com/iovisor/bcc/tree/master/docs) や、 Sasha Goldshteinの[linux-tracing-workshop](https://github.com/goldshtn/linux-tracing-workshop) に発展的な内容が含まれています。また、 rbbcc/bcc の /tools ディレクトリも参考になるでしょう。今のところは、Pythonのコードの知識も助けになることでしょう :)
 
-Please read [CONTRIBUTING-SCRIPTS.md](../CONTRIBUTING-SCRIPTS.md) if you wish to contrubite tools to rbbcc. At the bottom of the main [README.md](../README.md), you'll also find methods for contacting us. Good luck, and happy tracing!
+rbbccにツールを作って貢献したい場合、 [CONTRIBUTING.md](../CONTRIBUTING.md) を読んでください(準備中です)。 [README.md](../README.md) の下にはコンタクトすべきリストもあります(これも準備中; いまいまは @udzura で構いません)。では、良い旅を。Enjoy Tracing!
 
 ---
 
 ## Networking
 
-To do.
+やる気はある。

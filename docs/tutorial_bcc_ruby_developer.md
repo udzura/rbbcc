@@ -740,7 +740,7 @@ The userspace component loads the file shown above, and attaches it to the
 `finish_task_switch` kernel function.
 The `[]` operator of the BPF object gives access to each BPF_HASH in the
 program, allowing pass-through access to the values residing in the kernel. Use
-the object as you would any other python dict object: read, update, and deletes
+the object as you would any other Ruby Hash object: read, update, and deletes
 are all allowed.
 
 ```ruby
@@ -765,7 +765,7 @@ These programs can be found in the files [answers/16-task_switch.c](answers/16-t
 
 For further study, see [BCC original docs](https://github.com/iovisor/bcc/tree/master/docs) and Sasha Goldshtein's [linux-tracing-workshop](https://github.com/goldshtn/linux-tracing-workshop), which contains additional labs. There are also many tools in rbbcc/bcc /tools to study.
 
-Please read [CONTRIBUTING-SCRIPTS.md](../CONTRIBUTING-SCRIPTS.md) if you wish to contrubite tools to rbbcc. At the bottom of the main [README.md](../README.md), you'll also find methods for contacting us. Good luck, and happy tracing!
+Please read [CONTRIBUTING-SCRIPTS.md](../CONTRIBUTING-SCRIPTS.md) if you wish to contrubite tools to rbbcc(it's preparing). At the bottom of the main [README.md](../README.md), you'll also find methods for contacting us(preparing; contact @udzura for Ruby version). Good luck, and happy tracing!
 
 ---
 
