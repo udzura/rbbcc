@@ -5,7 +5,7 @@
 
 ---
 
-This tutorial is about developing bcc tools and programs using the Ruby interface, using [RbBCC](https://github.com/udzura/rbbcc/). In this time the oart of observability is implemented. Snippets are taken from various programs in [bcc](https://github.com/iovisor/bcc/tree/master/tools): see their files for licences. And we have implemented their Ruby versions and put them on [`answers/`](answers/).
+This tutorial is about developing bcc tools and programs using the Ruby interface, using [RbBCC](https://github.com/udzura/rbbcc/). In this time the part of observability is implemented. Snippets are taken from various programs in [bcc](https://github.com/iovisor/bcc/tree/master/tools): see their files for licences. And we have implemented their Ruby versions and put them on [`answers/`](answers/).
 
 Also see the bcc developer's [reference_guide.md](https://github.com/iovisor/bcc/blob/master/docs/reference_guide.md#bpf-c) for C interface.
 
@@ -115,16 +115,16 @@ This is similar to hello_world.rb, and traces new processes via sys_clone() agai
 
 1. ```b.attach_kprobe(event: b.get_syscall_fnname("clone"), fn_name: "hello")```: Creates a kprobe for the kernel clone system call function, which will execute our defined hello() function. You can call attach_kprobe() more than once, and attach your C function to multiple kernel functions.
 
-1. ```b.trace_fields do |...|```: Loop wirth a fixed set of fields from trace_pipe(without blcok, this method just returns the same set of fields). Similar to trace_print(), this is handy for hacking, but for real tooling we should switch to BPF_PERF_OUTPUT().
+1. ```b.trace_fields do |...|```: Loop with a fixed set of fields from trace_pipe(without blcok, this method just returns the same set of fields). Similar to trace_print(), this is handy for hacking, but for real tooling we should switch to BPF_PERF_OUTPUT().
 
-### Lesson 4. sync_timing.py
+### Lesson 4. sync_timing.rb
 
 Remember the days of sysadmins typing ```sync``` three times on a slow console before ```reboot```, to give the first asynchronous sync time to complete? Then someone thought ```sync;sync;sync``` was clever, to run them all on one line, which became industry practice despite defeating the original purpose! And then sync became synchronous, so more reasons it was silly. Anyway.
 
 The following example times how quickly the ```do_sync``` function is called, and prints output if it has been called more recently than one second ago. A ```sync;sync;sync``` will print output for the 2nd and 3rd sync's:
 
 ```
-# ./examples/tracing/sync_timing.py
+# ruby answers/04-sync_timing.rb
 Tracing for quick sync's... Ctrl-C to end
 At time 0.00 s: multiple syncs detected, last 95 ms ago
 At time 0.10 s: multiple syncs detected, last 96 ms ago
@@ -186,7 +186,7 @@ Things to learn (all in C):
 
 *Note for RbBCC developers:* Type of `trace_fields` return values differ from python's This should be fixed.
 
-### Lesson 5. sync_count.py
+### Lesson 5. sync_count.rb
 
 Modify the sync_timing.rb program (prior lesson) to store the count of all kernel sync system calls (both fast and slow), and print it with the output. This count can be recorded in the BPF program by adding a new key index to the existing hash.
 
@@ -427,7 +427,7 @@ Example is at [answers/10-disklatency.rb](answers/10-disklatency.rb).
 
 ### Lesson 11. vfsreadlat.rb
 
-This example is split into separate Python and C files. Example output:
+This example is split into separate Ruby and C files. Example output:
 
 ```
 # bundle exec answers/11-vfsreadlat.rb 1
@@ -519,7 +519,7 @@ end
 
 Things to learn:
 
-1. ```TRACEPOINT_PROBE(random, urandom_read)```: Instrument the kernel tracepoint ```random:urandom_read```. These have a stable API, and thus are recommend to use instead of kprobes, wherever possible. You can run ```perf list``` for a list of tracepoints. Linux >= 4.7 is required to attach BPF programs to tracepoints.
+1. ```TRACEPOINT_PROBE(random, urandom_read)```: Instrument the kernel tracepoint(it's different from Ruby's `TracePoint` class) ```random:urandom_read```. These have a stable API, and thus are recommend to use instead of kprobes, wherever possible. You can run ```perf list``` for a list of tracepoints. Linux >= 4.7 is required to attach BPF programs to tracepoints.
 1. ```args->got_bits```: ```args``` is auto-populated to be a structure of the tracepoint arguments. The comment above says where you can see that structure. Eg:
 
 ```
@@ -632,7 +632,7 @@ Things to learn:
 
 1. ```PT_REGS_PARM1(ctx)```: This fetches the first argument to ```strlen()```, which is the string.
 1. ```b.attach_uprobe(name: "c", sym: "strlen", fn_name: "count")```: Attach to library "c" (if this is the main program, use its pathname), instrument the user-level function ```strlen()```, and on execution call our C function ```count()```.
-1. For ```BPF_HASH```, you should call ```k/v.to_bcc_value``` to iterate in Ruby block. This behavior is Ruby specific and would be changed in the future.
+1. Currently you should call ```k/v.to_bcc_value``` to iterate objects from ```BPF_HASH``` in Ruby block. This behavior is Ruby specific and would be changed in the future.
 
 ### Lesson 15. nodejs_http_server.rb
 
@@ -692,6 +692,8 @@ Things to learn:
 1. ```u.enable_probe(probe: "http__server__request", fn_name: "do_trace")```: Attach our ```do_trace()``` BPF C function to the Node.js ```http__server__request``` USDT probe.
 1. ```b = BCC.new(text: bpf_text, usdt_contexts: [u])```: Need to pass in our USDT object, ```u```, to BPF object creation.
 
+Of cource, there are also USDT probes embedded in Ruby(MRI) itself, so we are going to add some new Ruby USDT lessons. Contributions are welcomed.
+
 ### Lesson 16. task_switch.c
 
 This is an older tutorial included as a bonus lesson. Use this for recap and to reinforce what you've already learned.
@@ -738,7 +740,7 @@ The userspace component loads the file shown above, and attaches it to the
 `finish_task_switch` kernel function.
 The `[]` operator of the BPF object gives access to each BPF_HASH in the
 program, allowing pass-through access to the values residing in the kernel. Use
-the object as you would any other python dict object: read, update, and deletes
+the object as you would any other Ruby Hash object: read, update, and deletes
 are all allowed.
 
 ```ruby
@@ -763,7 +765,7 @@ These programs can be found in the files [answers/16-task_switch.c](answers/16-t
 
 For further study, see [BCC original docs](https://github.com/iovisor/bcc/tree/master/docs) and Sasha Goldshtein's [linux-tracing-workshop](https://github.com/goldshtn/linux-tracing-workshop), which contains additional labs. There are also many tools in rbbcc/bcc /tools to study.
 
-Please read [CONTRIBUTING-SCRIPTS.md](../CONTRIBUTING-SCRIPTS.md) if you wish to contrubite tools to rbbcc. At the bottom of the main [README.md](../README.md), you'll also find methods for contacting us. Good luck, and happy tracing!
+Please read [CONTRIBUTING-SCRIPTS.md](../CONTRIBUTING-SCRIPTS.md) if you wish to contrubite tools to rbbcc(it's preparing). At the bottom of the main [README.md](../README.md), you'll also find methods for contacting us(preparing; contact @udzura for Ruby version). Good luck, and happy tracing!
 
 ---
 
