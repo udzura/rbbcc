@@ -759,7 +759,7 @@ end
 
 ### Lesson 17. Further Study
 
-さらに学習したい場合、 [BCC のオリジナエルのドキュメント](https://github.com/iovisor/bcc/tree/master/docs) や、 Sasha Goldshteinの[linux-tracing-workshop](https://github.com/goldshtn/linux-tracing-workshop) に発展的な内容が含まれています。また、 rbbcc/bcc の /tools ディレクトリも参考になるでしょう。今のところは、Pythonのコードの知識も助けになることでしょう :)
+さらに学習したい場合、 [BCC のオリジナルのドキュメント](https://github.com/iovisor/bcc/tree/master/docs) や、 Sasha Goldshteinの[linux-tracing-workshop](https://github.com/goldshtn/linux-tracing-workshop) に発展的な内容が含まれています。また、 rbbcc/bcc の /tools ディレクトリも参考になるでしょう。今のところは、Pythonのコードの知識も助けになることでしょう :)
 
 rbbccにツールを作って貢献したい場合、 [CONTRIBUTING.md](../CONTRIBUTING.md) を読んでください(準備中です)。 [README.md](../README.md) の下にはコンタクトすべきリストもあります(これも準備中; いまいまは @udzura で構いません)。では、良い旅を。Enjoy Tracing!
 
