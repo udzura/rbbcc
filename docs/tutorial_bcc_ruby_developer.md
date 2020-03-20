@@ -427,7 +427,7 @@ Example is at [answers/10-disklatency.rb](answers/10-disklatency.rb).
 
 ### Lesson 11. vfsreadlat.rb
 
-This example is split into separate Python and C files. Example output:
+This example is split into separate Ruby and C files. Example output:
 
 ```
 # bundle exec answers/11-vfsreadlat.rb 1
@@ -519,7 +519,7 @@ end
 
 Things to learn:
 
-1. ```TRACEPOINT_PROBE(random, urandom_read)```: Instrument the kernel tracepoint ```random:urandom_read```. These have a stable API, and thus are recommend to use instead of kprobes, wherever possible. You can run ```perf list``` for a list of tracepoints. Linux >= 4.7 is required to attach BPF programs to tracepoints.
+1. ```TRACEPOINT_PROBE(random, urandom_read)```: Instrument the kernel tracepoint(it's different from Ruby's `TracePoint` class) ```random:urandom_read```. These have a stable API, and thus are recommend to use instead of kprobes, wherever possible. You can run ```perf list``` for a list of tracepoints. Linux >= 4.7 is required to attach BPF programs to tracepoints.
 1. ```args->got_bits```: ```args``` is auto-populated to be a structure of the tracepoint arguments. The comment above says where you can see that structure. Eg:
 
 ```

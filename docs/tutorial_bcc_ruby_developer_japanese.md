@@ -341,10 +341,10 @@ end
 1. ```struct data_t data = {};```: 空の `data_t` 構造体を作成し、その後中身を埋めます。
 1. ```bpf_get_current_pid_tgid()```: 下位の32bitで、「プロセスID/PID」を返します(カーネルから見たPIDです。ユーザスペースからは、一般にスレッドIDと呼ばれます)。そしてスレッドグループID/TGIDは上位32bitに含まれています(これは、ユーザスペースで言うところのPIDです)。この関数を返り値をu32型の変数に格納すると、上位の32bit分は破棄されます。PIDとTGIDのどちらを利用すべきでしょうか？ マルチスレッドなアプリケーションでは、どのスレッドもTGIDは同じはずです。したがってもし必要であればPIDで区別する必要があります。そしてこれはツールのエンドユーザーが予期しているところでもあるでしょう。
 1. ```bpf_get_current_comm()```: 最初の引数のポインタアドレスに現在のプロセス名を格納します。
-1. ```events.perf_submit()```: perfのリングバッファを経由して、イベントをユーザスペースに送信します。
+1. ```events.perf_submit()```: ここで、perfのリングバッファを経由して、イベントをユーザスペースに送信します。
 1. ```print_event = lambda { ... }```: ```events``` ストリームから流れてくるイベントをハンドルするRubyのprocオブジェクト(lamnbda)を定義します; ところでPythonと違い、Ruby版の `Table#open_perf_buffer` は直接ブロックを受け取ることもできます :)
 1. ```b["events"].event(data)```: ここで、Cの定義から自動生成したRubyのオブジェクトとして、イベントデータを受け取ります。
-1. ```b["events"].open_perf_buffer(&print_event)```: proc ```print_event``` を ```events``` と関連づけます。
+1. ```b["events"].open_perf_buffer(&print_event)```: proc ```print_event``` をCで定義した ```events``` と関連づけます。
 1. ```loop { b.perf_buffer_poll() }```: イベントが来るのを待ち構えます。
 
 ### Lesson 8. sync_perf_output.rb
@@ -355,7 +355,7 @@ end
 
 ### Lesson 9. bitehist.rb
 
-The following tool records a histogram of disk I/O sizes. Sample output:
+次のツールは、disk I/Oのサイズを記録しヒストグラムで可視化します。サンプル出力です:
 
 ```
 # bundle exec answers/09-bitehist.rb
@@ -372,7 +372,7 @@ Tracing... Hit Ctrl-C to end.
      128 -> 255      : 800      |**************************************|
 ```
 
-Code is [answers/09-bitehist.rb](answers/09-bitehist.rb):
+コードは [answers/09-bitehist.rb](answers/09-bitehist.rb) です:
 
 ```ruby
 require 'rbbcc'
@@ -406,28 +406,28 @@ end
 b["dist"].print_log2_hist("kbytes")
 ```
 
-A recap from earlier lessons:
+ここまでのレッスンのおさらい:
 
-- ```kprobe__```: This prefix means the rest will be treated as a kernel function name that will be instrumented using kprobe.
-- ```struct pt_regs *ctx, struct request *req```: Arguments to kprobe. The ```ctx``` is registers and BPF context, the ```req``` is the first argument to the instrumented function: ```blk_account_io_completion()```.
-- ```req->__data_len```: Dereferencing that member.
+- ```kprobe__```: このプレフィックスにより、その後ろの名前のカーネル関数をkprobeでの計測対象にすることを意味します。
+- ```struct pt_regs *ctx, struct request *req```: kprobeへの引数です。 ```ctx``` でBPFのコンテクストを取得し、 ```req``` は計測対象の関数 ```blk_account_io_completion()``` の最初の引数です。
+- ```req->__data_len```: その `req` のメンバをデリファレンスします。
 
-New things to learn:
+新しい要素です:
 
-1. ```BPF_HISTOGRAM(dist)```: Defines a BPF map object that is a histogram, and names it "dist".
-1. ```dist.increment()```: Increments the histogram bucket index provided as first argument by one by default. Optionally, custom increments can be passed as the second argument.
-1. ```bpf_log2l()```: Returns the log-2 of the provided value. This becomes the index of our histogram, so that we're constructing a power-of-2 histogram.
-1. ```b["dist"].print_log2_hist("kbytes")```: Prints the "dist" histogram as power-of-2, with a column header of "kbytes". The only data transferred from kernel to user space is the bucket counts, making this efficient.
+1. ```BPF_HISTOGRAM(dist)```: ヒストグラムのためのBPF mapオブジェクトを定義し、 "dist" と名付けます。
+1. ```dist.increment()```: 第1引数で指定されたインデックスのヒストグラム上の階級を1つインクリメントします。オプションとして。第2引数にインクリメントする度合いを指定することもできます。
+1. ```bpf_log2l()```: 引数の値の log2() を計算し返します。これがヒストグラムのインデックスになるので、2のべき乗のヒストグラムを作成することになります。
+1. ```b["dist"].print_log2_hist("kbytes")```: "dist" に加工のしたヒストグラムを、 "kbytes" と言うヘッダで出力します。カーネルからユーザスペースへ送信されるデータは各階級のカウントだけになるので、効率的です。
 
 ### Lesson 10. disklatency.rb
 
-Write a program that times disk I/O, and prints a histogram of their latency. Disk I/O instrumentation and timing can be found in the disksnoop.rb program from a prior lesson, and histogram code can be found in bitehist.rb from a prior lesson.
+disk I/O のレイテンシを計測し、ヒストグラムを出力するプログラムを書きましょう。disk I/Oのトレースと時間計測は以前書いたdisksnoop.rbで、ヒストグラムの作り方はさきほどのbitehist.rbを参考にできます。
 
-Example is at [answers/10-disklatency.rb](answers/10-disklatency.rb).
+回答例は: [answers/10-disklatency.rb](answers/10-disklatency.rb).
 
 ### Lesson 11. vfsreadlat.rb
 
-This example is split into separate Python and C files. Example output:
+このサンプルはRubyとCのファイルに分かれています。出力例です:
 
 ```
 # bundle exec answers/11-vfsreadlat.rb 1
@@ -467,15 +467,15 @@ Tracing... Hit Ctrl-C to end.
 [...]
 ```
 
-Browse the code in [answers/11-vfsreadlat.rb](answers/11-vfsreadlat.rb) and [answers/11-vfsreadlat.c](answers/11-vfsreadlat.c). Things to learn:
+コードは [answers/11-vfsreadlat.rb](answers/11-vfsreadlat.rb) と [answers/11-vfsreadlat.c](answers/11-vfsreadlat.c) にあるので見てみましょう。学べることは:
 
-1. ```b = BCC.new(src_file: "vfsreadlat.c")```: Read the BPF C program from a separate source file.
-1. ```b.attach_kretprobe(event: "vfs_read", fn_name: "do_return")```: Attaches the BPF C function ```do_return()``` to the return of the kernel function ```vfs_read()```. This is a kretprobe: instrumenting the return from a function, rather than its entry.
-1. ```b["dist"].clear()```: Clears the histogram.
+1. ```b = BCC.new(src_file: "vfsreadlat.c")```: BPF Cプログラムを別の場所から読み込みます。Rubyファイルと同じディレクトリにあればOKです。
+1. ```b.attach_kretprobe(event: "vfs_read", fn_name: "do_return")```: BPFのC関数 ```do_return()``` をカーネル関数 ```vfs_read()``` にアタッチします。これは kretprobe と呼ばれるもので、いままでのように関数のエントリーではなく、関数のreturnを計測するものです。
+1. ```b["dist"].clear()```: ヒストグラムをRuby側からクリアします。定期的なインターバルで計測するためです。
 
 ### Lesson 12. urandomread.rb
 
-Tracing while a ```dd if=/dev/urandom of=/dev/null bs=8k count=5``` is run:
+```dd if=/dev/urandom of=/dev/null bs=8k count=5``` の実行をトレースします:
 
 ```
 # bundle exec answers/12-urandomread.rb
@@ -488,7 +488,7 @@ TIME(s)            COMM             PID    GOTBITS
 24652837.728888001 dd               24692  65536
 ```
 
-Hah! I caught smtp by accident. Code is [answers/12-urandomread.rb](answers/12-urandomread.rb):
+おや！偶然smtpのイベントも捕まえました。コードは [answers/12-urandomread.rb](answers/12-urandomread.rb):
 
 ```ruby
 require 'rbbcc'
@@ -517,10 +517,10 @@ loop do
 end
 ```
 
-Things to learn:
+学ぶことです:
 
-1. ```TRACEPOINT_PROBE(random, urandom_read)```: Instrument the kernel tracepoint ```random:urandom_read```. These have a stable API, and thus are recommend to use instead of kprobes, wherever possible. You can run ```perf list``` for a list of tracepoints. Linux >= 4.7 is required to attach BPF programs to tracepoints.
-1. ```args->got_bits```: ```args``` is auto-populated to be a structure of the tracepoint arguments. The comment above says where you can see that structure. Eg:
+1. ```TRACEPOINT_PROBE(random, urandom_read)```: カーネルの tracepoint(Rubyの `TracePoint` クラスとは名前が同じだけです)である ```random:urandom_read``` を計測します。このtracepointは「安定した(stable)」APIを提供します。カーネル関数のようにバージョンによって変わることがないと言う意味です。そのため、可能な限りkprobeよりもこちらを使うことが推奨されます。 ```perf list``` コマンドを実行すればtracepointのリストが手に入ります。BPFのプログラムをtracepointにアタッチするにはLinuxのバージョン4.7以上が必要です。
+1. ```args->got_bits```: ```args``` はTRACEPOINT_PROBEマクロが自動定義する変数で、tracepointの引数が格納された構造体です。上にあるコメントはその構造を確認できるLinux上のファイルです。例えば:
 
 ```
 # cat /sys/kernel/debug/tracing/events/random/urandom_read/format
@@ -539,13 +539,13 @@ format:
 print fmt: "got_bits %d nonblocking_pool_entropy_left %d input_entropy_left %d", REC->got_bits, REC->pool_left, REC->input_left
 ```
 
-In this case, we were printing the ```got_bits``` member.
+今回は、 ```got_bits``` メンバを表示しています。
 
 ### Lesson 13. disksnoop.rb fixed
 
-Convert disksnoop.rb from a previous lesson to use the ```block:block_rq_issue``` and ```block:block_rq_complete``` tracepoints.
+ここまでのレッスンで作成した disksnoop.rb を、 ```block:block_rq_issue``` と ```block:block_rq_complete``` tracepointを使って書き直しましょう。
 
-Example is at [answers/13-disksnoop_fixed.rb](answers/13-disksnoop_fixed.rb).
+たとえば、回答例は [answers/13-disksnoop_fixed.rb](answers/13-disksnoop_fixed.rb) です。
 
 
 ### Lesson 14. strlen_count.rb
