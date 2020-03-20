@@ -550,7 +550,7 @@ print fmt: "got_bits %d nonblocking_pool_entropy_left %d input_entropy_left %d",
 
 ### Lesson 14. strlen_count.rb
 
-This program instruments a user-level function, the ```strlen()``` library function, and frequency counts its string argument. Example output:
+このプログラムは（カーネルではなく）ユーザレベルの関数をトレースします。今回はライブラリ関数 ```strlen()``` で、その引数の文字列の登場回数をカウントします。こう言う出力です:
 
 ```
 # bundle exec answers/14-strlen_count.rb
@@ -574,9 +574,9 @@ Tracing strlen()... Hit Ctrl-C to end.
        340 "\x01\x1b]0;root@bgregg-test: ~\x07\x02root@bgregg-test:~# "
 ```
 
-These are various strings that are being processed by this library function while tracing, along with their frequency counts. ```strlen()``` was called on "LC_ALL" 12 times, for example.
+このライブラリ関数で処理される文字列には様々な種類があることが、登場回数のカウントからわかります。たとえば "LC_ALL" と言う文字列は12回 ```strlen()``` の引数になりました。
 
-Code is [answers/14-strlen_count.rb](answers/14-strlen_count.rb):
+コードは [answers/14-strlen_count.rb](answers/14-strlen_count.rb):
 
 ```ruby
 require 'rbbcc'
@@ -628,15 +628,15 @@ counts.items.sort_by{|k, v| v.to_bcc_value }.each do |k, v|
 end
 ```
 
-Things to learn:
+今回の学びです:
 
-1. ```PT_REGS_PARM1(ctx)```: This fetches the first argument to ```strlen()```, which is the string.
-1. ```b.attach_uprobe(name: "c", sym: "strlen", fn_name: "count")```: Attach to library "c" (if this is the main program, use its pathname), instrument the user-level function ```strlen()```, and on execution call our C function ```count()```.
-1. For ```BPF_HASH```, you should call ```k/v.to_bcc_value``` to iterate in Ruby block. This behavior is Ruby specific and would be changed in the future.
+1. ```PT_REGS_PARM1(ctx)```: ```strlen()``` の最初の引数をレジスタから取り出します。文字列です。
+1. ```b.attach_uprobe(name: "c", sym: "strlen", fn_name: "count")```: "c" ライブラリ(もし関数がプログラムの側にあるのなら、バイナリのpathnameを用いてください)にアタッチし、ユーザレベル関数 ```strlen()``` を計測、その実行のたびに私たちが定義したC関数 ```count()``` を呼び出します。
+1. ```BPF_HASH``` から `Table#items` で取り出した値をRubyで扱うには、面倒ですが ```k/v.to_bcc_value``` をRubyのブロックの中などで呼び出す必要があります。この挙動はRuby版の実装の都合によるものですが、将来変更する可能性があります。
 
 ### Lesson 15. nodejs_http_server.rb
 
-This program instruments a user statically-defined tracing (USDT) probe, which is the user-level version of a kernel tracepoint. Sample output:
+このプログラムはユーザが静的に定義したトレースポイント(User Statically-Defined Tracing: **USDT**)をprobeとして計測するもので、USDTはユーザランドにおけるカーネルのtracepointに相当するものです。出力例です:
 
 ```
 # bundle exec answers/15-nodejs_http_server.rb
@@ -646,7 +646,7 @@ TIME(s)            COMM             PID    ARGS
 24653340.510164998 node             24728  path:/images/favicon.png
 ```
 
-Example code from [answers/15-nodejs_http_server.rb](answers/15-nodejs_http_server.rb)
+回答例は [answers/15-nodejs_http_server.rb](answers/15-nodejs_http_server.rb) にあります; 同じディレクトリにあるnode.jsのサーバプログラムを、USDTを有効にした(`--enable-dtrace`)ビルドのnode.jsバイナリで実行して計測する必要があります。
 
 ```ruby
 require 'rbbcc'
@@ -684,13 +684,15 @@ end
 b = BCC.new(text: bpf_text, usdt_contexts: [u])
 ```
 
-Things to learn:
+今回の学び:
 
-1. ```bpf_usdt_readarg(6, ctx, &addr)```: Read the address of argument 6 from the USDT probe into ```addr```.
-1. ```bpf_probe_read(&path, sizeof(path), (void *)addr)```: Now the string ```addr``` points to into our ```path``` variable.
-1. ```u = USDT.new(pid: pid.to_i)```: Initialize USDT tracing for the given PID.
-1. ```u.enable_probe(probe: "http__server__request", fn_name: "do_trace")```: Attach our ```do_trace()``` BPF C function to the Node.js ```http__server__request``` USDT probe.
-1. ```b = BCC.new(text: bpf_text, usdt_contexts: [u])```: Need to pass in our USDT object, ```u```, to BPF object creation.
+1. ```bpf_usdt_readarg(6, ctx, &addr)```: USDT probeの6番目の引数が格納されたアドレスを、 ```addr``` に読み込みます。
+1. ```bpf_probe_read(&path, sizeof(path), (void *)addr)```: ここで、 ```addr``` が示している文字列をBPFプログラム側の ```path``` に格納します。
+1. ```u = USDT.new(pid: pid.to_i)```: USDTのトレースを与えられたPIDに対してできるよう初期化します。
+1. ```u.enable_probe(probe: "http__server__request", fn_name: "do_trace")```: 私たちの書いたBPF C関数 ```do_trace()``` をNode.jsのUSDTである ```http__server__request``` probeにアタッチします。
+1. ```b = BCC.new(text: bpf_text, usdt_contexts: [u])```: BPFのオブジェクトを作る際に、先ほどのUSDTオブジェクト ```u``` を渡す必要があります。
+
+もちろん、Ruby自身にもUSDTが存在するので、このレッスンでサンプルを追加する予定です(P/Rは歓迎です)。
 
 ### Lesson 16. task_switch.c
 

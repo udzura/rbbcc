@@ -632,7 +632,7 @@ Things to learn:
 
 1. ```PT_REGS_PARM1(ctx)```: This fetches the first argument to ```strlen()```, which is the string.
 1. ```b.attach_uprobe(name: "c", sym: "strlen", fn_name: "count")```: Attach to library "c" (if this is the main program, use its pathname), instrument the user-level function ```strlen()```, and on execution call our C function ```count()```.
-1. For ```BPF_HASH```, you should call ```k/v.to_bcc_value``` to iterate in Ruby block. This behavior is Ruby specific and would be changed in the future.
+1. Currently you should call ```k/v.to_bcc_value``` to iterate objects from ```BPF_HASH``` in Ruby block. This behavior is Ruby specific and would be changed in the future.
 
 ### Lesson 15. nodejs_http_server.rb
 
@@ -691,6 +691,8 @@ Things to learn:
 1. ```u = USDT.new(pid: pid.to_i)```: Initialize USDT tracing for the given PID.
 1. ```u.enable_probe(probe: "http__server__request", fn_name: "do_trace")```: Attach our ```do_trace()``` BPF C function to the Node.js ```http__server__request``` USDT probe.
 1. ```b = BCC.new(text: bpf_text, usdt_contexts: [u])```: Need to pass in our USDT object, ```u```, to BPF object creation.
+
+Of cource, there are also USDT probes embedded in Ruby(MRI) itself, so we are going to add some new Ruby USDT lessons. Contributions are welcomed.
 
 ### Lesson 16. task_switch.c
 
