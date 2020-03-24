@@ -120,6 +120,7 @@ module RbBCC
     extern 'char * bpf_perf_event_field(void *program, const char *event, size_t i)'
 
     extern 'void * bcc_usdt_new_frompid(int, char *)'
+    extern 'void * bcc_usdt_new_frompath(char *path)'
     extern 'int bcc_usdt_enable_probe(void *, char *, char *)'
     extern 'char * bcc_usdt_genargs(void **, int)'
     extern 'void bcc_usdt_foreach_uprobe(void *, void *)'
