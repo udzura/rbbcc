@@ -2,6 +2,38 @@
 # To run this example, please build the target ruby with an `--enable-dtrace` option in advance.
 # To build via rbenv, sample command is:
 #     $ RUBY_CONFIGURE_OPTS='--enable-dtrace' rbenv install 2.7.0
+#
+# Example autput:
+#     # bundle exec ruby examples/ruby_usdt.rb $(pidof irb)
+#     TIME(s)            COMM   KLASS                    PATH
+#     0.000000000        irb    Struct::Key              /root/.rbenv/versions/2.7.0/lib/ruby/2.7.0/reline.rb
+#     0.000055206        irb    Array                    /root/.rbenv/versions/2.7.0/lib/ruby/2.7.0/reline/line_editor.rb
+#     0.000088588        irb    Ripper::Lexer            /root/.rbenv/versions/2.7.0/lib/ruby/2.7.0/ripper/lexer.rb
+#     0.000117740        irb    Ripper::Lexer::Elem      /root/.rbenv/versions/2.7.0/lib/ruby/2.7.0/ripper/lexer.rb
+#     0.000126697        irb    Ripper::Lexer::State     /root/.rbenv/versions/2.7.0/lib/ruby/2.7.0/ripper/lexer.rb
+#     0.000213388        irb    Array                    /root/.rbenv/versions/2.7.0/lib/ruby/2.7.0/reline/line_editor.rb
+#     0.000225678        irb    Ripper::Lexer            /root/.rbenv/versions/2.7.0/lib/ruby/2.7.0/ripper/lexer.rb
+#     0.000243638        irb    Array                    /root/.rbenv/versions/2.7.0/lib/ruby/2.7.0/reline/line_editor.rb
+#     0.000254680        irb    Range                    /root/.rbenv/versions/2.7.0/lib/ruby/2.7.0/irb/ruby-lex.rb
+#     0.000264707        irb    Ripper::Lexer            /root/.rbenv/versions/2.7.0/lib/ruby/2.7.0/ripper/lexer.rb
+#     0.000275579        irb    Ripper::Lexer::Elem      /root/.rbenv/versions/2.7.0/lib/ruby/2.7.0/ripper/lexer.rb
+#     0.000282438        irb    Ripper::Lexer::State     /root/.rbenv/versions/2.7.0/lib/ruby/2.7.0/ripper/lexer.rb
+#     0.000326136        irb    String                   /root/.rbenv/versions/2.7.0/lib/ruby/2.7.0/irb.rb
+#     0.001353621        irb    Array                    /root/.rbenv/versions/2.7.0/lib/ruby/2.7.0/reline/line_editor.rb
+#     0.001385320        irb    IRB::Color::SymbolState  /root/.rbenv/versions/2.7.0/lib/ruby/2.7.0/irb/color.rb
+#     0.001397043        irb    Ripper::Lexer            /root/.rbenv/versions/2.7.0/lib/ruby/2.7.0/irb/color.rb
+#     0.001416420        irb    Ripper::Lexer::Elem      /root/.rbenv/versions/2.7.0/lib/ruby/2.7.0/ripper/lexer.rb
+#     0.001423861        irb    Ripper::Lexer::State     /root/.rbenv/versions/2.7.0/lib/ruby/2.7.0/ripper/lexer.rb
+#     0.001462010        irb    Ripper::Lexer::State     /root/.rbenv/versions/2.7.0/lib/ruby/2.7.0/ripper/lexer.rb
+#     0.001478995        irb    Array                    /root/.rbenv/versions/2.7.0/lib/ruby/2.7.0/reline/line_editor.rb
+#     0.001487499        irb    Range                    /root/.rbenv/versions/2.7.0/lib/ruby/2.7.0/irb/ruby-lex.rb
+#     0.001496666        irb    Ripper::Lexer            /root/.rbenv/versions/2.7.0/lib/ruby/2.7.0/ripper/lexer.rb
+#     0.001508224        irb    Ripper::Lexer::Elem      /root/.rbenv/versions/2.7.0/lib/ruby/2.7.0/ripper/lexer.rb
+#     0.001515143        irb    Ripper::Lexer::State     /root/.rbenv/versions/2.7.0/lib/ruby/2.7.0/ripper/lexer.rb
+#     0.001556170        irb    String                   /root/.rbenv/versions/2.7.0/lib/ruby/2.7.0/irb.rb
+#     0.001726273        irb    String                   /root/.rbenv/versions/2.7.0/lib/ruby/2.7.0/reline/line_editor.rb
+#     0.001946948        irb    Array                    /root/.rbenv/versions/2.7.0/lib/ruby/2.7.0/reline/line_editor.rb
+#     0.001956585        irb    String                   /root/.rbenv/versions/2.7.0/lib/ruby/2.7.0/reline.rb
 
 require 'rbbcc'
 include RbBCC
