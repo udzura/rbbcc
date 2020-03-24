@@ -1,6 +1,7 @@
 require 'rbbcc/consts'
 require 'rbbcc/table'
 require 'rbbcc/symbol_cache'
+require 'rbbcc/debug'
 
 module RbBCC
   SYSCALL_PREFIXES = [
@@ -282,7 +283,7 @@ module RbBCC
       if fd < 0
         raise SystemCallError.new("Failed to attach BPF program #{fn_name} to tracepoint #{tp}", Fiddle.last_error)
       end
-      puts "Attach: #{tp}"
+      Util.debug "Attach: #{tp}"
       @tracepoint_fds[tp] = fd
       self
     end
@@ -297,7 +298,7 @@ module RbBCC
       if fd < 0
         raise SystemCallError.new("Failed to attach BPF program #{fn_name} to raw tracepoint #{tp}", Fiddle.last_error)
       end
-      puts "Attach: #{tp}"
+      Util.debug "Attach: #{tp}"
       @raw_tracepoint_fds[tp] = fd
       self
     end
@@ -309,7 +310,7 @@ module RbBCC
       if fd < 0
         raise SystemCallError.new("Failed to attach BPF program #{fn_name} to kprobe #{event}", Fiddle.last_error)
       end
-      puts "Attach: #{ev_name}"
+      Util.debug "Attach: #{ev_name}"
       @kprobe_fds[ev_name] = fd
       [ev_name, fd]
     end
@@ -322,7 +323,7 @@ module RbBCC
       if fd < 0
         raise SystemCallError.new("Failed to attach BPF program #{fn_name} to kretprobe #{event}", Fiddle.last_error)
       end
-      puts "Attach: #{ev_name}"
+      Util.debug "Attach: #{ev_name}"
       @kprobe_fds[ev_name] = fd
       [ev_name, fd]
     end
@@ -336,7 +337,7 @@ module RbBCC
       if fd < 0
         raise SystemCallError.new(Fiddle.last_error)
       end
-      puts "Attach: #{ev_name}"
+      Util.debug "Attach: #{ev_name}"
 
       @uprobe_fds[ev_name] = fd
       [ev_name, fd]
@@ -351,7 +352,7 @@ module RbBCC
       if fd < 0
         raise SystemCallError.new(Fiddle.last_error)
       end
-      puts "Attach: #{ev_name}"
+      Util.debug "Attach: #{ev_name}"
 
       @uprobe_fds[ev_name] = fd
       [ev_name, fd]
@@ -552,7 +553,7 @@ module RbBCC
         else
           next
         end
-        puts "Found fnc: #{func_name}"
+        Util.debug "Found fnc: #{func_name}"
         if func_name.start_with?("kprobe__")
           fn = load_func(func_name, BPF::KPROBE)
           attach_kprobe(
