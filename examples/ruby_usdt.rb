@@ -11,10 +11,11 @@ debug = !!ENV['DEBUG']
 
 bpf_text = <<BPF
 #include <uapi/linux/ptrace.h>
+#include <linux/sched.h>
 
 struct data_t {
-    u32 pid;
     u64 ts;
+    char comm[TASK_COMM_LEN];
     char klass[64];
     char path[256];
 };
@@ -24,9 +25,9 @@ int do_trace_create_object(struct pt_regs *ctx) {
     struct data_t data = {};
     uint64_t addr, addr2;
 
-    data.pid = bpf_get_current_pid_tgid();
     data.ts = bpf_ktime_get_ns();
 
+    bpf_get_current_comm(&data.comm, sizeof(data.comm));
     bpf_usdt_readarg_p(1, ctx, &data.klass, sizeof(data.klass));
     bpf_usdt_readarg_p(2, ctx, &data.path, sizeof(data.path));
 
@@ -46,7 +47,7 @@ end
 # initialize BPF
 b = BCC.new(text: bpf_text, usdt_contexts: [u])
 
-puts("%-18s %-6s %-24s %s" % ["TIME(s)", "PID", "KLASS", "PATH"])
+puts("%-18s %-6s %-24s %s" % ["TIME(s)", "COMM", "KLASS", "PATH"])
 
 # process event
 start = 0
@@ -58,11 +59,12 @@ b["events"].open_perf_buffer do |cpu, data, size|
 
   time_s = ((event.ts - start).to_f) / 1000000000
   puts(
-    "%-18.9f %-6d  %-24s %s" %
-    [time_s, event.pid, event.klass, event.path]
+    "%-18.9f %-6s %-24s %s" %
+    [time_s, event.comm, event.klass, event.path]
   )
 end
 
+Signal.trap(:INT) { puts "\nDone."; exit }
 loop do
   b.perf_buffer_poll()
 end
