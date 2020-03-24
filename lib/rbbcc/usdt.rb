@@ -33,5 +33,16 @@ module RbBCC
 
       return probes
     end
+
+    private
+    def __del__
+      lambda { Clib.bcc_usdt_close(@context); Util.debug("USDT GC'ed.") }
+    end
+  end
+end
+
+at_exit do
+  ObjectSpace.each_object(RbBCC::USDT) do |o|
+    o.send(:__del__).call
   end
 end
