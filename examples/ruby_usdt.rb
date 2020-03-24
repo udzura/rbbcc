@@ -1,4 +1,7 @@
 #!/usr/bin/env ruby
+# To run this example, please build the target ruby with an `--enable-dtrace` option in advance.
+# To build via rbenv, sample command is:
+#     $ RUBY_CONFIGURE_OPTS='--enable-dtrace' rbenv install 2.7.0
 
 require 'rbbcc'
 include RbBCC
