@@ -9,10 +9,34 @@
 require 'rbbcc'
 include RbBCC
 
-pid = ARGV[0] || begin
-  puts("USAGE: #{$0} PID")
+def usage
+  puts("USAGE: #{$0} [-p PID|-c COMM]")
   exit()
 end
+
+def find_libc_location
+  if File.exist?('/lib/x86_64-linux-gnu/libc.so.6')
+    '/lib/x86_64-linux-gnu/libc.so.6'
+  else
+    `find /lib -name 'libc.so*' | grep -v musl | head -1`.chomp
+  end
+end
+
+usage if ARGV.size != 0 && ARGV.size != 2
+
+pid = comm = nil
+path = find_libc_location
+case ARGV[0]
+when '-p', '--pid'
+  pid = ARGV[1].to_i
+when '-c', '--comm'
+  comm = ARGV[1]
+when nil
+  # nop
+else
+  usage
+end
+
 debug = !!ENV['DEBUG']
 
 bpf_text = <<BPF
@@ -39,10 +63,30 @@ BPF_PERF_OUTPUT(events);
 
 {{FUNC_LESS}}
 
+int trace_memory_free(struct pt_regs *ctx) {
+    struct data_t data = {};
+    long buf;
+
+    data.type = PROBE_TYPE_free;
+    data.ts = bpf_ktime_get_ns();
+    data.pid = bpf_get_current_pid_tgid();
+    bpf_get_current_comm(&data.comm, sizeof(data.comm));
+
+    bpf_usdt_readarg(1, ctx, &buf);
+    data.adjusted_mmap = buf;
+
+    bpf_usdt_readarg(2, ctx, &buf);
+    data.trim_thresholds = buf;
+
+    events.perf_submit(ctx, &data, sizeof(data));
+
+    return 0;
+};
+
 BPF
 
 trace_fun_sbrk = <<FUNC
-int trace_memory_sbrk_{{TYPE}}(struct pt_regs *ctx, void *arg1, u32 arg2) {
+int trace_memory_sbrk_{{TYPE}}(struct pt_regs *ctx) {
     struct data_t data = {};
     long buf;
 
@@ -52,10 +96,10 @@ int trace_memory_sbrk_{{TYPE}}(struct pt_regs *ctx, void *arg1, u32 arg2) {
     bpf_get_current_comm(&data.comm, sizeof(data.comm));
 
     bpf_usdt_readarg(1, ctx, &buf);
-    data.addr = buf1;
+    data.addr = buf;
 
     bpf_usdt_readarg(2, ctx, &buf);
-    data.sbrk_size = buf1;
+    data.sbrk_size = buf;
 
     events.perf_submit(ctx, &data, sizeof(data));
 
@@ -75,11 +119,16 @@ PROBE_MAP = {
 bpf_text.sub!('{{FUNC_MORE}}', trace_fun_sbrk.gsub('{{TYPE}}', 'more'))
 bpf_text.sub!('{{FUNC_LESS}}', trace_fun_sbrk.gsub('{{TYPE}}', 'less'))
 
-u = USDT.new(pid: pid.to_i)
+u = USDT.new(pid: pid, path: path)
 u.enable_probe(probe: "memory_sbrk_more", fn_name: "trace_memory_sbrk_more")
 u.enable_probe(probe: "memory_sbrk_less", fn_name: "trace_memory_sbrk_less")
-if debug
-  puts(u1.get_text)
+if pid
+  # FIXME: Only available when PID is specified
+  # otherwise got an error:
+  #     bpf: Failed to load program: Invalid argument
+  #     last insn is not an exit or jmp
+  # It seems libbcc won't generate proper readarg helper
+  u.enable_probe(probe: "memory_mallopt_free_dyn_thresholds", fn_name: "trace_memory_free")
 end
 
 # initialize BPF
@@ -95,10 +144,17 @@ b["events"].open_perf_buffer do |cpu, data, size|
   end
 
   time_s = ((event.ts - start).to_f) / 1000000000
-  puts(
-    "[%-18.9f] pid=%d comm=%s probe=%s addr=%#x size=%d" %
-    [time_s, event.pid, event.comm, PROBE_MAP[event.type], event.addr, event.sbrk_size]
-  )
+  if [PROBE_TYPE_more, PROBE_TYPE_less].include?(event.type)
+    puts(
+      "[%18.9f] pid=%d comm=%s probe=%s addr=%#x size=%d" %
+      [time_s, event.pid, event.comm, PROBE_MAP[event.type], event.addr, event.sbrk_size]
+    )
+  else
+    puts(
+      "[%18.9f] pid=%d comm=%s probe=%s adjusted_mmap=%d trim_thresholds=%d" %
+      [time_s, event.pid, event.comm, PROBE_MAP[event.type], event.adjusted_mmap, event.trim_thresholds]
+    )
+  end
 end
 
 Signal.trap(:INT) { puts "\n!! Done."; exit }
