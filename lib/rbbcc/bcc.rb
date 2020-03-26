@@ -218,6 +218,7 @@ module RbBCC
           text = code + text
         end
 
+        # Util.debug text
         @module = Clib.bpf_module_create_c_from_string(
           text,
           debug,
