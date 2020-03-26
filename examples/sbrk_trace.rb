@@ -5,6 +5,21 @@
 # - memory_mallopt_free_dyn_thresholds
 # Description is here: https://www.gnu.org/software/libc/manual/html_node/Memory-Allocation-Probes.html
 #
+# Example output:
+# bundle exec ruby examples/sbrk_trace.rb -c ruby
+# !! Trace start.
+# [       0.000000000] pid=32756 comm=ruby probe=memory_sbrk_more addr=0x55f34b979000 size=135168
+# [       0.036549804] pid=32756 comm=ruby probe=memory_sbrk_more addr=0x557fd9760000 size=135168
+# [       0.036804183] pid=32756 comm=ruby probe=memory_sbrk_more addr=0x557fd9781000 size=143360
+# [       0.036855378] pid=32756 comm=ruby probe=memory_sbrk_less addr=0x557fd97a0000 size=16384
+# [       0.036931376] pid=32756 comm=ruby probe=memory_sbrk_more addr=0x557fd97a0000 size=147456
+# [       0.036940382] pid=32756 comm=ruby probe=memory_sbrk_less addr=0x557fd97c0000 size=16384
+# [       0.037022971] pid=32756 comm=ruby probe=memory_sbrk_more addr=0x557fd97c0000 size=151552
+# [       0.038602464] pid=32756 comm=ruby probe=memory_sbrk_more addr=0x557fd97e5000 size=204800
+# [       0.039398297] pid=32756 comm=ruby probe=memory_sbrk_more addr=0x557fd9817000 size=135168
+# [       0.039909594] pid=32756 comm=ruby probe=memory_sbrk_more addr=0x557fd9838000 size=135168
+# [       0.040536005] pid=32756 comm=ruby probe=memory_sbrk_more addr=0x557fd9859000 size=163840
+# ...
 
 require 'rbbcc'
 include RbBCC
