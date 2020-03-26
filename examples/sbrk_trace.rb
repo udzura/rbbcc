@@ -55,6 +55,18 @@ struct data_t {
 };
 BPF_PERF_OUTPUT(events);
 
+static inline bool streq(uintptr_t str) {
+    char needle[] = "{{NEEDLE}}";
+    char haystack[sizeof(needle)];
+    bpf_probe_read(&haystack, sizeof(haystack), (void *)str);
+    for (int i = 0; i < sizeof(needle) - 1; ++i) {
+        if (needle[i] != haystack[i]) {
+            return false;
+        }
+    }
+    return true;
+}
+
 #define PROBE_TYPE_more 1
 #define PROBE_TYPE_less 2
 #define PROBE_TYPE_free 3
@@ -72,6 +84,7 @@ int trace_memory_free(struct pt_regs *ctx) {
     data.pid = bpf_get_current_pid_tgid();
     bpf_get_current_comm(&data.comm, sizeof(data.comm));
 
+    {{NEEDLE_START}}
     bpf_usdt_readarg(1, ctx, &buf);
     data.adjusted_mmap = buf;
 
@@ -79,6 +92,7 @@ int trace_memory_free(struct pt_regs *ctx) {
     data.trim_thresholds = buf;
 
     events.perf_submit(ctx, &data, sizeof(data));
+    {{NEEDLE_END}}
 
     return 0;
 };
@@ -95,6 +109,7 @@ int trace_memory_sbrk_{{TYPE}}(struct pt_regs *ctx) {
     data.pid = bpf_get_current_pid_tgid();
     bpf_get_current_comm(&data.comm, sizeof(data.comm));
 
+    {{NEEDLE_START}}
     bpf_usdt_readarg(1, ctx, &buf);
     data.addr = buf;
 
@@ -102,6 +117,7 @@ int trace_memory_sbrk_{{TYPE}}(struct pt_regs *ctx) {
     data.sbrk_size = buf;
 
     events.perf_submit(ctx, &data, sizeof(data));
+    {{NEEDLE_END}}
 
     return 0;
 };
@@ -118,6 +134,16 @@ PROBE_MAP = {
 
 bpf_text.sub!('{{FUNC_MORE}}', trace_fun_sbrk.gsub('{{TYPE}}', 'more'))
 bpf_text.sub!('{{FUNC_LESS}}', trace_fun_sbrk.gsub('{{TYPE}}', 'less'))
+
+if comm
+  bpf_text.sub!('{{NEEDLE}}', comm)
+  bpf_text.gsub!('{{NEEDLE_START}}', "if(streq((uintptr_t)data.comm)) {")
+  bpf_text.gsub!('{{NEEDLE_END}}', "}")
+else
+  bpf_text.sub!('{{NEEDLE}}', "")
+  bpf_text.gsub!('{{NEEDLE_START}}', "")
+  bpf_text.gsub!('{{NEEDLE_END}}', "")
+end
 
 u = USDT.new(pid: pid, path: path)
 u.enable_probe(probe: "memory_sbrk_more", fn_name: "trace_memory_sbrk_more")
