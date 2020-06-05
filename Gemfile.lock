@@ -19,8 +19,8 @@ PLATFORMS
 
 DEPENDENCIES
   bundler (~> 2.0)
-  minitest
-  pry
+  minitest (>= 5)
+  pry (~> 0.12)
   rake (~> 13.0)
   rbbcc!
 
