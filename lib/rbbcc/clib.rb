@@ -25,7 +25,7 @@ module RbBCC
     end
 
     extend Fiddle::Importer
-    targets = %w(0.12.0 0.11.0 0.10.0)
+    targets = %w(0.14.0 0.13.0 0.12.0 0.11.0 0.10.0)
     if default_load = ENV['LIBBCC_VERSION']
       targets.unshift(default_load)
       targets.uniq!
