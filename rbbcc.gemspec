@@ -7,6 +7,7 @@ Gem::Specification.new do |spec|
   spec.version       = RbBCC::VERSION
   spec.authors       = ["Uchio Kondo"]
   spec.email         = ["udzura@udzura.jp"]
+  spec.license       = "Apache-2.0"
 
   spec.summary       = %q{BCC port for MRI}
   spec.description   = %q{BCC port for MRI. See https://github.com/iovisor/bcc}
