@@ -7,6 +7,7 @@ Gem::Specification.new do |spec|
   spec.version       = RbBCC::VERSION
   spec.authors       = ["Uchio Kondo"]
   spec.email         = ["udzura@udzura.jp"]
+  spec.license       = "Apache-2.0"
 
   spec.summary       = %q{BCC port for MRI}
   spec.description   = %q{BCC port for MRI. See https://github.com/iovisor/bcc}
@@ -20,9 +21,4 @@ Gem::Specification.new do |spec|
   #spec.bindir        = "exe"
   #spec.executables   = spec.files.grep(%r{^exe/}) { |f| File.basename(f) }
   spec.require_paths = ["lib"]
-
-  spec.add_development_dependency "bundler", "~> 2.0"
-  spec.add_development_dependency "rake", "~> 13.0"
-  spec.add_development_dependency "pry"
-  spec.add_development_dependency "minitest"
 end
