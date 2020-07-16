@@ -219,10 +219,16 @@ module RbBCC
         end
 
         # Util.debug text
+        cflags_p = if cflags.empty?
+                     nil
+                   else
+                     cflags.pack('p*')
+                   end
+
         @module = Clib.bpf_module_create_c_from_string(
           text,
           debug,
-          cflags.pack('p*'),
+          cflags_p,
           cflags.size,
           allow_rlimit
         )
