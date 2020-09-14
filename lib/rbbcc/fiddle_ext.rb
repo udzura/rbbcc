@@ -2,8 +2,16 @@ require 'fiddle'
 require 'fiddle/import'
 
 class Fiddle::Pointer
-  # fixme: handling struct
-  def to_bcc_value
+  def bcc_value
+    @bcc_value ||= _bcc_value
+  end
+  alias to_bcc_value bcc_value
+
+  def _bcc_value
+    if self.bcc_value_type.is_a?(Class)
+      return self.bcc_value_type.new(self)
+    end
+
     case self.bcc_size
     when Fiddle::Importer.sizeof("int")
       self[0, self.size].unpack("i!").first
@@ -12,6 +20,12 @@ class Fiddle::Pointer
     else
       self[0, self.size].unpack("Z*").first
     end
+  end
+
+  def method_missing(name, *a)
+    bcc_value.respond_to?(name) ?
+      bcc_value.send(name) :
+      super
   end
 
   attr_accessor :bcc_value_type
