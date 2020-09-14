@@ -218,18 +218,18 @@ module RbBCC
           text = code + text
         end
 
-        # Util.debug text
-        cflags_p = if cflags.empty?
-                     nil
-                   else
-                     cflags.pack('p*')
-                   end
+
+        cflags_safe = if cflags.empty? or !cflags[-1].nil?
+                        cflags + [nil]
+                      else
+                        cflags
+                      end
 
         @module = Clib.bpf_module_create_c_from_string(
           text,
           debug,
-          cflags_p,
-          cflags.size,
+          cflags_safe.pack("p*"),
+          cflags_safe.size,
           allow_rlimit
         )
       end
