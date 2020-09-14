@@ -23,9 +23,15 @@ class Fiddle::Pointer
   end
 
   def method_missing(name, *a)
-    bcc_value.respond_to?(name) ?
-      bcc_value.send(name) :
+    fields = self.class.respond_to?(:fields) ?
+               self.class.fields : nil
+    return super unless fields
+
+    if fields.include?(name) && bcc_value.respond_to?(name)
+      bcc_value.send(name)
+    else
       super
+    end
   end
 
   attr_accessor :bcc_value_type
