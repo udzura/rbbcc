@@ -50,12 +50,13 @@ module RbBCC
     def initialize(bpf, map_id, map_fd, keytype, leaftype, name: nil)
       @bpf, @map_id, @map_fd, @keysize, @leafsize = \
                                         bpf, map_id, map_fd, sizeof(keytype), sizeof(leaftype)
+      @keytype = keytype
       @leaftype = leaftype
       @ttype = Clib.bpf_table_type_id(self.bpf.module, self.map_id)
       @flags = Clib.bpf_table_flags_id(self.bpf.module, self.map_id)
       @name = name
     end
-    attr_reader :bpf, :map_id, :map_fd, :keysize, :leafsize, :leaftype, :ttype, :flags, :name
+    attr_reader :bpf, :map_id, :map_fd, :keysize, :keytype, :leafsize, :leaftype, :ttype, :flags, :name
 
     def next(key)
       next_key = Fiddle::Pointer.malloc(self.keysize)
@@ -86,6 +87,7 @@ module RbBCC
       if res < 0
         nil
       end
+      leaf.bcc_value_type = leaftype
       return leaf
     end
 
@@ -93,8 +95,9 @@ module RbBCC
       self[key] || raise(KeyError, "key not found")
     end
 
-    def []=(_key, leaf)
+    def []=(_key, _leaf)
       key = normalize_key(_key)
+      leaf = normalize_leaf(_leaf)
       res = Clib.bpf_update_elem(self.map_fd, key, leaf, 0)
       if res < 0
         raise SystemCallError.new("Could not update table", Fiddle.last_error)
@@ -186,11 +189,29 @@ module RbBCC
     def normalize_key(key)
       case key
       when Fiddle::Pointer
+        key.bcc_value_type = keytype
+        key.bcc_size = keysize
         key
       when Integer
-        byref(key, keysize)
+        ret = byref(key, keysize)
+        ret.bcc_value_type = keytype
+        ret
       else
-        raise KeyError, "#{key.inspect} must be integer or pointor"
+        raise ArgumentError, "#{key.inspect} must be integer or pointor"
+      end
+    end
+
+    def normalize_leaf(leaf)
+      case leaf
+      when Fiddle::Pointer
+        leaf.bcc_value_type = leaftype
+        leaf
+      when Integer
+        ret = byref(leaf, keysize)
+        ret.bcc_value_type = leaftype
+        ret
+      else
+        raise KeyError, "#{leaf.inspect} must be integer or pointor"
       end
     end
 
@@ -202,6 +223,7 @@ module RbBCC
                  end
       ptr = Fiddle::Pointer.malloc(size)
       ptr[0, size] = [value].pack(pack_fmt)
+      ptr.bcc_size = size
       ptr
     end
   end

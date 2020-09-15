@@ -153,11 +153,37 @@ module RbBCC
             raise("Failed to decode type #{field.inspect}")
           end
         end
+        c = nil
         if data_type == "union"
-          return Fiddle::Importer.union(fields)
+          c = Fiddle::Importer.union(fields)
         else
-          return Fiddle::Importer.struct(fields)
+          c = Fiddle::Importer.struct(fields)
         end
+
+        fields.each do |field|
+          md = /^char\[(\d+)\] ([_a-zA-Z0-9]+)/.match(field)
+          if md
+            c.alias_method "__super_#{md[2]}", md[2]
+            c.define_method md[2] do
+              # Split the char[] in the place where the first \0 appears
+              raw = __send__("__super_#{md[2]}")
+              raw = raw[0...raw.index(0)] if raw.index(0)
+              raw.pack("c*")
+            end
+          end
+        end
+
+        c.define_singleton_method :original_desc do
+          desc
+        end
+        c.define_singleton_method :fields do
+          fields
+        end
+        orig_name = c.inspect
+        c.define_singleton_method :inspect do
+          orig_name.sub /(?=>$)/, " original_desc=#{desc.inspect}" rescue super
+        end
+        c
       end
 
       def sym(addr, pid, show_module: false, show_offset: false, demangle: true)
