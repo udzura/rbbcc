@@ -1,3 +1,39 @@
+#!/usr/bin/env ruby
+#
+# Example to use complecated structure in BPF Map key:
+# This program collects and shows raw syscall usage summary.
+#
+# Usage:
+#     bundle exec ruby examples/collectsyscall.rb
+#
+# Output example:
+#     Collecting syscalls...
+#     ^C
+#     PID=1098(maybe: gmain) --->
+#       inotify_add_watch      4    0.019 ms
+#       poll                   1    0.000 ms
+#
+#     PID=1114(maybe: dbus-daemon) --->
+#       stat                  12    0.021 ms
+#       openat                 3    0.015 ms
+#       getdents               2    0.013 ms
+#       recvmsg                2    0.006 ms
+#       sendmsg                1    0.008 ms
+#       close                  1    0.002 ms
+#       fstat                  1    0.002 ms
+#       epoll_wait             1    0.000 ms
+#
+#     PID=1175(maybe: memcached) --->
+#       epoll_wait             3 2012.455 ms
+#
+#     PID=1213(maybe: redis-server) --->
+#       read                  64    0.736 ms
+#       epoll_wait            32 3782.098 ms
+#       openat                32    1.149 ms
+#       getpid                32    0.074 ms
+#       close                 32    0.045 ms
+#     ....
+
 require 'rbbcc'
 include RbBCC
 
@@ -17,6 +53,8 @@ SYSCALL_MAP = `ausyscall --dump`
                 .map{|l| l.chomp.split }
                 .each_with_object(Hash.new) {|(k, v), ha| ha[k.to_i] = v }
 
+# if no ausyscall(8) then shows number itself
+# it is included in auditd package (e.g. Ubuntu)
 def to_name(nr)
   SYSCALL_MAP[nr] || nr.to_s
 end
