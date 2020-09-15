@@ -121,7 +121,6 @@ module RbBCC
 
       def decode_table_type(desc)
         return desc if desc.is_a?(String)
-
         anon = []
         fields = []
         # e.g. ["bpf_stacktrace", [["ip", "unsigned long long", [127]]], "struct_packed"]

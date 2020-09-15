@@ -23,8 +23,13 @@ class Fiddle::Pointer
   end
 
   def method_missing(name, *a)
-    fields = self.class.respond_to?(:fields) ?
-               self.class.fields : nil
+    fields = \
+      if self.respond_to?(:bcc_value_type) && \
+         self.bcc_value_type.respond_to?(:fields)
+        self.bcc_value_type.fields.map{|v| v.split.last.to_sym }
+      else
+        nil
+      end
     return super unless fields
 
     if fields.include?(name) && bcc_value.respond_to?(name)
