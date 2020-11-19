@@ -1,0 +1,4 @@
+#!/usr/bin/env ruby
+
+binpath = File.readlink "/proc/self/exe"
+exec binpath, *ARGV
