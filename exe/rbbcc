@@ -1,4 +1,12 @@
 #!/usr/bin/env ruby
 
-binpath = File.readlink "/proc/self/exe"
-exec binpath, *ARGV
+if ARGV[0] == '-v' || ARGV[0] == '--version'
+  require 'rbbcc/version'
+  print "RbBCC: version "
+  puts RbBCC::VERSION
+  print "Using "
+  puts RUBY_DESCRIPTION
+else
+  binpath = File.readlink "/proc/self/exe"
+  exec binpath, *ARGV
+end
