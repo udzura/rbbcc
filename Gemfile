@@ -10,6 +10,7 @@ gem "minitest", ">= 5"
 
 group :omnibus_package do
   gem "appbundler"
+  gem "specific_install"
 end
 
 group :plugin_dev do
