@@ -1,3 +1,10 @@
+GIT
+  remote: https://github.com/udzura/rbbcc-hello.git
+  revision: 2e1af47d22e7cc92e970dc6c058e113cf00821db
+  specs:
+    rbbcc-hello (0.1.0)
+      rbbcc
+
 PATH
   remote: .
   specs:
@@ -31,6 +38,7 @@ DEPENDENCIES
   pry (~> 0.12)
   rake (~> 13.0)
   rbbcc!
+  rbbcc-hello!
 
 BUNDLED WITH
    2.1.4

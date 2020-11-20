@@ -11,3 +11,7 @@ gem "minitest", ">= 5"
 group :omnibus_package do
   gem "appbundler"
 end
+
+group :plugin_dev do
+  gem "rbbcc-hello", git: "https://github.com/udzura/rbbcc-hello.git"
+end
