@@ -6,7 +6,7 @@ module RbBCC
       @scripts ||= []
     end
 
-    def find_script_name(name)
+    def self.find_script_name(name)
       scripts.find{|s|
         s.name == name || "#{s.name}.rb" == name
       }&.location
@@ -20,7 +20,7 @@ module RbBCC
       end
 
       found = Dir.glob("#{plugin_loc}/*.rb")
-                .map{|path| ScriptLocation.new path.sub(/\.rb\z/), path }
+                .map{|path| ScriptLocation.new File.basename(path, '.rb'), path }
       self.scripts.concat found
       self.scripts
     end

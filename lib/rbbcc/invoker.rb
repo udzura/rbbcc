@@ -5,6 +5,8 @@ module RbBCC
   class Invoker
     def initialize(args)
       @command = args.shift
+      raise "Invalid option. Please specify script name" unless @command
+
       args.shift if args[0] == '--'
       @args = args
     end
@@ -20,9 +22,7 @@ module RbBCC
       raise Errno::ENOENT, "Script not found: #{@command}" unless script
 
       binpath = File.readlink "/proc/self/exe"
-      exec binpath, *ARGV
-
-      Process.exec binpath, '-rrbbcc', script, *@args
+      Process.exec binpath, script, *@args
     end
   end
 end
