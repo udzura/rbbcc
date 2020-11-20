@@ -8,7 +8,7 @@ GIT
 PATH
   remote: .
   specs:
-    rbbcc (0.6.2)
+    rbbcc (0.6.3)
 
 GEM
   remote: https://rubygems.org/
