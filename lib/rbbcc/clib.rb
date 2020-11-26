@@ -44,24 +44,38 @@ module RbBCC
     end
     typealias "size_t", "int"
 
-    extern 'void * bpf_module_create_c_from_string(char *, unsigned int, char **, int, long)'
     extern 'void * bpf_module_create_b(char *filename, char *proto_filename, unsigned int flags, char *dev_name)'
     extern 'int bpf_num_functions(void *)'
     extern 'char * bpf_function_name(void *, int)'
     extern 'void bpf_module_destroy(void *)'
 
     if libbcc_version_gteq?("0.11.0")
+      extern 'void * bpf_module_create_c_from_string(
+                  const char *text, unsigned int flags, const char *cflags[],
+                  int ncflags, int allow_rlimit,
+                  const char *dev_name)'
       extern 'int bcc_func_load(
                   void *program, int prog_type, const char *name,
                   const struct bpf_insn *insns, int prog_len,
                   const char *license, unsigned int kern_version,
                   int log_level, char *log_buf, unsigned int log_buf_size,
                   const char *dev_name)'
+      def self.do_bpf_module_create_c_from_string(text, flags, cflags, ncflags, allow_limit, dev_name)
+        bpf_module_create_c_from_string(text, flags, cflags, ncflags, allow_limit, dev_name)
+      end
+
       def self.do_bcc_func_load(mod, prog_type, name, insns, len, license, kver, loglv, buf, buf_size, device)
         bcc_func_load(mod, prog_type, name, insns, len, license, kver, loglv, buf, buf_size, device)
       end
     else
+      extern 'void * bpf_module_create_c_from_string(
+                  const char *text, unsigned int flags, const char *cflags[],
+                  int ncflags, int allow_rlimit)'
       extern 'int bcc_func_load(void *, int, char *, void *, int, char *, unsigned int, int, char *, unsigned int)'
+      def self.do_bpf_module_create_c_from_string(text, flags, cflags, ncflags, allow_limit, dev_name=nil)
+        bpf_module_create_c_from_string(text, flags, cflags, ncflags, allow_limit)
+      end
+
       def self.do_bcc_func_load(mod, prog_type, name, insns, len, license, kver, loglv, buf, buf_size, device)
         bcc_func_load(mod, prog_type, name, insns, len, license, kver, loglv, buf, buf_size)
       end

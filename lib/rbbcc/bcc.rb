@@ -220,7 +220,7 @@ module RbBCC
       end
     end
 
-    def initialize(text: "", src_file: nil, hdr_file: nil, debug: 0, cflags: [], usdt_contexts: [], allow_rlimit: 0)
+    def initialize(text: "", src_file: nil, hdr_file: nil, debug: 0, cflags: [], usdt_contexts: [], allow_rlimit: 0, dev_name: nil)
       @kprobe_fds = {}
       @uprobe_fds = {}
       @tracepoint_fds = {}
@@ -232,7 +232,7 @@ module RbBCC
       end
 
       if src_file && src_file.end_with?(".b")
-        @module = Clib.bpf_module_create_b(src_file, hdr_file, debug, device)
+        @module = Clib.bpf_module_create_b(src_file, hdr_file, debug, dev_name)
       else
         if src_file
           text = File.read(src_file)
@@ -250,12 +250,13 @@ module RbBCC
                         cflags
                       end
 
-        @module = Clib.bpf_module_create_c_from_string(
+        @module = Clib.do_bpf_module_create_c_from_string(
           text,
           debug,
           cflags_safe.pack("p*"),
           cflags_safe.size,
-          allow_rlimit
+          allow_rlimit,
+          dev_name
         )
       end
       @funcs = {}
