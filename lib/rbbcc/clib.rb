@@ -51,8 +51,8 @@ module RbBCC
 
     if libbcc_version_gteq?("0.11.0")
       extern 'void * bpf_module_create_c_from_string(
-                  const char *text, unsigned flags, const char *cflags[],
-                  int ncflags, bool allow_rlimit,
+                  const char *text, unsigned int flags, const char *cflags[],
+                  int ncflags, int allow_rlimit,
                   const char *dev_name)'
       extern 'int bcc_func_load(
                   void *program, int prog_type, const char *name,
@@ -69,8 +69,8 @@ module RbBCC
       end
     else
       extern 'void * bpf_module_create_c_from_string(
-                  const char *text, unsigned flags, const char *cflags[],
-                  int ncflags, bool allow_rlimit)'
+                  const char *text, unsigned int flags, const char *cflags[],
+                  int ncflags, int allow_rlimit)'
       extern 'int bcc_func_load(void *, int, char *, void *, int, char *, unsigned int, int, char *, unsigned int)'
       def self.do_bpf_module_create_c_from_string(text, flags, cflags, ncflags, allow_limit, dev_name=nil)
         bpf_module_create_c_from_string(text, flags, cflags, ncflags, allow_limit)
