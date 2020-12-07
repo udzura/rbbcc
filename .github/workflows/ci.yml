@@ -25,5 +25,5 @@ jobs:
                    -v /usr/include/linux:/usr/include/linux:ro \
                    rbbcc-ci \
                    /bin/bash -c \
-                   'bundle install && bundle exec rake test'"
+                   'cd /rbbcc && bundle install && bundle exec rake test'"
     
