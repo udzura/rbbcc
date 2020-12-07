@@ -1,0 +1,6 @@
+name: Tests
+on: push
+
+jobs:
+  test:
+    
