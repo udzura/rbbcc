@@ -67,7 +67,7 @@ RUN wget -O bcc-$BCC_VERSION.tar.gz \
          https://github.com/iovisor/bcc/releases/download/v$BCC_VERSION/bcc-src-with-submodule.tar.gz && \
     tar -xzvf bcc-$BCC_VERSION.tar.gz && \
     cd bcc/ && \
-    git init . && git commit -am 'Dummy' && git tag v$BCC_VERSION && \
+    git init . && git add . && git commit -m 'Dummy' && git tag v$BCC_VERSION && \
     mkdir build && cd build/ && \
     cmake -DCMAKE_BUILD_TYPE=Release .. && \
     cd src/cc && \
