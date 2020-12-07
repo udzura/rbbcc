@@ -60,7 +60,7 @@ RUN wget -O ruby-install-0.7.1.tar.gz \
     make install
 
 RUN ruby-install --system ruby 2.7.2
-RUN git config --global user.name 'udzura' &&
+RUN git config --global user.name 'udzura' && \
     git config --global user.email 'udzura@udzura.jp'
 
 RUN wget -O bcc-$BCC_VERSION.tar.gz \
