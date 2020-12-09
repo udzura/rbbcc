@@ -9,11 +9,14 @@ ENV BCC_VERSION=$BCC_VERSION
 ARG RUBY_VERSION="2.7.2"
 ENV RUBY_VERSION=$RUBY_VERSION
 
-ARG RUBY_VERSION_ARCHIVE="ruby-${RUBY_VERSION}-.tar.bz2"
+ARG RUBY_VERSION_ARCHIVE="ruby-${RUBY_VERSION}.tar.bz2"
 ENV RUBY_VERSION_ARCHIVE=$RUBY_VERSION_ARCHIVE
 
 ARG RUBY_EXTRA_OPTS=""
 ENV RUBY_EXTRA_OPTS=$RUBY_EXTRA_OPTS
+
+ARG BCC_EXTRA_OPTS=""
+ENV BCC_EXTRA_OPTS=$BCC_EXTRA_OPTS
 
 RUN apt-get update && apt-get install -y curl gnupg && \
     llvmRepository="\n\
@@ -66,9 +69,10 @@ deb-src http://apt.llvm.org/bionic/ llvm-toolchain-bionic-${LLVM_VERSION} main\n
          https://github.com/iovisor/bcc/releases/download/v$BCC_VERSION/bcc-src-with-submodule.tar.gz && \
   tar -xzvf bcc-$BCC_VERSION.tar.gz && \
   cd bcc/ && \
+  ( test "$BCC_VERSION" = "0.12.0" && curl https://github.com/iovisor/bcc/commit/977a7e3a568c4c929fabeb4a025528d9b6f1e84c.patch | patch -p1 || true ) && \
   git init . && git add . && git commit -m 'Dummy' && git tag v$BCC_VERSION && \
   mkdir build && cd build/ && \
-  cmake -DCMAKE_BUILD_TYPE=Release .. && \
+  cmake $BCC_EXTRA_OPTS -DCMAKE_BUILD_TYPE=Release .. && \
   cd src/cc && \
   make -j8 && make install && \
   cd ../.. && \
