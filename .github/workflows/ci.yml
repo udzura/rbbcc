@@ -10,6 +10,9 @@ jobs:
     runs-on: ubuntu-18.04
     steps:
     - uses: actions/checkout@v2
+    - name: Login to ghcr.io
+      run: |
+        echo ${{ secrets.CR_PAT }} | docker login ghcr.io -u udzura  --password-stdin
     - name: Build docker container with all deps
       run: |
         docker build -t rbbcc-ci-0.16.0 -f ci/Dockerfile.0.16.0 ci/
