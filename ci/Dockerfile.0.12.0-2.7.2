@@ -1,0 +1,1 @@
+FROM ghcr.io/udzura/rbbcc-ci-images:libbcc-0.12.0

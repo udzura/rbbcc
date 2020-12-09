@@ -7,12 +7,21 @@ on:
 
 jobs:
   test:
+    strategy:
+      matrix:
+        libbcc_version: [0.17.0, 0.16.0, 0.12.0]
+        ruby_version: [2.7.2, 3.0.0-preview2]
+
     runs-on: ubuntu-18.04
     steps:
     - uses: actions/checkout@v2
+    - name: Login to ghcr.io
+      run: |
+        echo ${{ secrets.CR_PAT }} | docker login ghcr.io -u udzura  --password-stdin
     - name: Build docker container with all deps
       run: |
-        docker build -t rbbcc-ci -f Dockerfile.ci .
+        docker build -t rbbcc-ci-${{ matrix.libbcc_version }}-${{ matrix.ruby_version }} \
+                     -f ci/Dockerfile.${{ matrix.libbcc_version }}-${{ matrix.ruby_version }} ci/
     - name: Run test
       run: |
         /bin/bash -c \
@@ -23,7 +32,7 @@ jobs:
                    -v /lib/modules:/lib/modules:ro \
                    -v /usr/src:/usr/src:ro \
                    -v /usr/include/linux:/usr/include/linux:ro \
-                   rbbcc-ci \
+                   rbbcc-ci-${{ matrix.libbcc_version }}-${{ matrix.ruby_version }} \
                    /bin/bash -c \
                    'cd /rbbcc && bundle install && bundle exec rake test'"
     
