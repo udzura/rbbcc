@@ -12,7 +12,7 @@ jobs:
     - uses: actions/checkout@v2
     - name: Build docker container with all deps
       run: |
-        docker build -t rbbcc-ci -f Dockerfile.ci .
+        docker build -t rbbcc-ci-0.16.0 -f ci/Dockerfile.0.16.0 ci/
     - name: Run test
       run: |
         /bin/bash -c \
@@ -23,7 +23,7 @@ jobs:
                    -v /lib/modules:/lib/modules:ro \
                    -v /usr/src:/usr/src:ro \
                    -v /usr/include/linux:/usr/include/linux:ro \
-                   rbbcc-ci \
+                   rbbcc-ci-0.16.0 \
                    /bin/bash -c \
                    'cd /rbbcc && bundle install && bundle exec rake test'"
     
