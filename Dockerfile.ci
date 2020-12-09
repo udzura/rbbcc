@@ -6,6 +6,15 @@ ENV LLVM_VERSION="9"
 ARG BCC_VERSION="0.16.0"
 ENV BCC_VERSION=$BCC_VERSION
 
+ARG RUBY_VERSION="2.7.2"
+ENV RUBY_VERSION=$RUBY_VERSION
+
+ARG RUBY_VERSION_ARCHIVE="ruby-${RUBY_VERSION}-.tar.bz2"
+ENV RUBY_VERSION_ARCHIVE=$RUBY_VERSION_ARCHIVE
+
+ARG RUBY_EXTRA_OPTS=""
+ENV RUBY_EXTRA_OPTS=$RUBY_EXTRA_OPTS
+
 RUN apt-get update && apt-get install -y curl gnupg && \
     llvmRepository="\n\
 deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic main\n\
@@ -49,7 +58,8 @@ deb-src http://apt.llvm.org/bionic/ llvm-toolchain-bionic-${LLVM_VERSION} main\n
   tar -xzvf ruby-install-0.7.1.tar.gz && \
   cd ruby-install-0.7.1/ && \
   make install && \
-  ruby-install --system ruby 2.7.2 && \
+  sed -i 's/^ruby_archive=.*/ruby_archive="${ruby_archive:-ruby-$ruby_version.tar.bz2}"/' /usr/local/share/ruby-install/ruby/functions.sh && \
+  env ruby_archive=$RUBY_VERSION_ARCHIVE ruby-install --system $RUBY_EXTRA_OPTS ruby $RUBY_VERSION && \
   git config --global user.name 'udzura' && \
   git config --global user.email 'udzura@udzura.jp' && \
   wget -O bcc-$BCC_VERSION.tar.gz \
