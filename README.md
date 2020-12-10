@@ -1,6 +1,6 @@
 # RbBCC
 
-[![Gem Version](https://badge.fury.io/rb/rbbcc.svg)](https://badge.fury.io/rb/rbbcc) [![CI status](https://udzura.semaphoreci.com/badges/rbbcc.svg)](https://udzura.semaphoreci.com/projects/rbbcc)
+[![Gem Version](https://badge.fury.io/rb/rbbcc.svg)](https://badge.fury.io/rb/rbbcc) [![CI Status](https://github.com/udzura/rbbcc/workflows/Tests/badge.svg)](https://udzura.semaphoreci.com/projects/rbbcc)
 
 RbBCC is a port of [BCC](https://github.com/iovisor/bcc) in MRI. See iovisor project page.
 
