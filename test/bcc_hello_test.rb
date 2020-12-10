@@ -25,7 +25,7 @@ class BCCHelloTest < Minitest::Test
     }
 
     comm, pid, cpu, flags, ts, msg = @module.trace_fields
-    assert_equal("ruby", comm)
+    assert(["ruby", "<...>"].include?(comm))
     assert_match(/\A\d+\z/, pid)
     assert_match(/\A\d+\.\d+\z/, ts)
     assert_equal("Hello, World!\n", msg)
