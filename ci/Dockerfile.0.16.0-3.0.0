@@ -1,0 +1,1 @@
+FROM ghcr.io/udzura/rbbcc-ci-images:libbcc-0.16.0-ruby-3.0.0
