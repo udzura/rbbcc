@@ -480,6 +480,7 @@ module RbBCC
     def trace_fields(&do_each_line)
       ret = []
       while buf = trace_readline
+        next if buf.chomp.empty?
         next if buf.start_with? "CPU:"
         task = buf[0..15].lstrip()
         meta, _addr, msg = buf[17..-1].split(": ", 3)
