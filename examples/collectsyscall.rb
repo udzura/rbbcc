@@ -38,10 +38,14 @@ require 'rbbcc'
 include RbBCC
 
 $pid = nil
+$comm = nil
 
 if ARGV.size == 2 &&
    ARGV[0] == '-p'
   $pid = ARGV[1].to_i
+elsif ARGV.size == 2 &&
+   ARGV[0] == '-c'
+  $comm = ARGV[1]
 elsif ARGV[0] == '-h' ||
       ARGV[0] == '--help'
   $stderr.puts "Usage: #{$0} [-p PID]"
@@ -77,11 +81,15 @@ BPF_HASH(store, struct key_t, struct leaf_t);
 TRACEPOINT_PROBE(raw_syscalls, sys_enter) {
     struct key_t key = {0};
     struct leaf_t initial = {0}, *val_;
+    char comm[16];
 
-    key.pid = bpf_get_current_pid_tgid();
+    // key.pid = bpf_get_current_pid_tgid();
+    key.pid = (bpf_get_current_pid_tgid() >> 32);
     key.syscall_nr = args->id;
 
     DO_FILTER_BY_PID
+    bpf_get_current_comm(&comm, sizeof(comm));
+    DO_FILTER_BY_COMM
 
     val_ = store.lookup_or_try_init(&key, &initial);
     if (val_) {
@@ -98,15 +106,17 @@ TRACEPOINT_PROBE(raw_syscalls, sys_exit) {
     struct key_t key = {0};
     struct leaf_t *val_;
 
-    key.pid = bpf_get_current_pid_tgid();
+    key.pid = (bpf_get_current_pid_tgid() >> 32);
     key.syscall_nr = args->id;
 
     val_ = store.lookup(&key);
     if (val_) {
       struct leaf_t val = *val_;
-      u64 delta = bpf_ktime_get_ns() - val.enter_ns;
-      val.enter_ns = 0;
-      val.elapsed_ns += delta;
+      if(val.enter_ns) {
+        u64 delta = bpf_ktime_get_ns() - val.enter_ns;
+        val.enter_ns = 0;
+        val.elapsed_ns += delta;
+      }
       store.update(&key, &val);
     }
     return 0;
@@ -119,6 +129,22 @@ if $pid
   FILTER
 else
   prog.sub!('DO_FILTER_BY_PID', '')
+end
+
+if $comm
+  prog.sub!('DO_FILTER_BY_COMM', <<~FILTER)
+    int idx;
+    int matched = 1;
+    char *needle = "#{$comm}";
+    for(idx=0;idx<sizeof(comm);++idx) {
+      if (comm[idx] != needle[idx]) matched = 0;
+      if (!needle[idx]) break;
+      if (!comm[idx]) break;
+    }
+    if(!matched) return 0;
+  FILTER
+else
+  prog.sub!('DO_FILTER_BY_COMM', '')
 end
 
 b = BCC.new(text: prog)
@@ -134,14 +160,15 @@ info_by_pids = {}
 comms = {}
 store = b.get_table("store")
 store.items.each do |k, v|
-  # require 'pry'; binding.pry
+  #require 'pry'; binding.pry
+  count, elapsed_ns, _dummy, comm = v[0, 40].unpack("Q Q Q Z16")
   info_by_pids[k.pid] ||= {}
   info_by_pids[k.pid][k.syscall_nr] = {
     name: to_name(k.syscall_nr),
-    count: v.count,
-    elapsed_ms: v.elapsed_ns / 1000000.0
+    count: count,
+    elapsed_ms: elapsed_ns / 1000000.0
   }
-  comms[k.pid] ||= v.comm
+  comms[k.pid] ||= comm
 end
 
 pids = info_by_pids.keys.sort

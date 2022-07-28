@@ -33,7 +33,7 @@ def find_libc_location
   if File.exist?('/lib/x86_64-linux-gnu/libc.so.6')
     '/lib/x86_64-linux-gnu/libc.so.6'
   else
-    `find /lib -name 'libc.so*' | grep -v musl | head -1`.chomp
+    `find /lib/ -name 'libc.so*' | tail -1`.chomp
   end
 end
 
