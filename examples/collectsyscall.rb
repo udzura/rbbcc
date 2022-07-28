@@ -176,7 +176,7 @@ pids.each do |pid|
   puts "PID=#{pid}(maybe: #{comms[pid]}) --->"
   i = info_by_pids[pid]
   i.to_a.sort_by {|k, v| [-v[:count], -v[:elapsed_ms]] }.each do |nr, record|
-    puts "\t%<name>-20s %<count>3d %<elapsed_ms>8.3f ms" % record
+    puts "\t%<name>-22s %<count>7d %<elapsed_ms>10.3f ms" % record
   end
   puts
 end
