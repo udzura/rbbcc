@@ -101,7 +101,7 @@ module RbBCC
       when BPF_MAP_TYPE_PERF_EVENT_ARRAY
         PerfEventArray.new(bpf, map_id, map_fd, keytype, leaftype, name: name)
       when BPF_MAP_TYPE_RINGBUF
-        RingBuf.new(bpf, map_id, map_fd, keytype, leaftype, name)
+        RingBuf.new(bpf, map_id, map_fd, keytype, leaftype, name: name)
       when BPF_MAP_TYPE_STACK_TRACE
         StackTrace.new(bpf, map_id, map_fd, keytype, leaftype)
       else
@@ -401,7 +401,7 @@ module RbBCC
   class RingBuf < TableBase
     include EventTypeSupported
     
-    def initialize(bpf, map_id, map_fd, keytype, leaftype, name=nil)
+    def initialize(bpf, map_id, map_fd, keytype, leaftype, name: nil)
       super
       @_ringbuf = nil
       @_ringbuf_manager = nil
@@ -415,7 +415,7 @@ module RbBCC
       return ev
     end
 
-    def open_ring_buffer(callback, ctx=nil)
+    def open_ring_buffer(ctx=nil, &callback)
       # bind("int ring_buffer_sample_fn(void *, void *, int)")
       fn = Fiddle::Closure::BlockCaller.new(
         Fiddle::TYPE_INT,
@@ -424,11 +424,11 @@ module RbBCC
         begin
           _ret = callback.call(ctx, data, size)
           ret = _ret.to_i
-          return ret
+          ret
         rescue NoMethodError
           # Callback for ringbufs should _always_ return an integer.
           # simply fall back to returning 0 when failed
-          return 0
+          0
         rescue => e
           if Fiddle.last_error == 32 # EPIPE
             exit
@@ -438,7 +438,7 @@ module RbBCC
         end
       end
 
-      @bpf._open_ring_buffer(@map_fd, fn. ctx)
+      @bpf._open_ring_buffer(@map_fd, fn, ctx)
       nil
     end
   end

@@ -52,7 +52,7 @@ print_event = lambda { |ctx, data, size|
 }
 
 # loop with callback to print_event
-b["events"].open_ring_buffer(&print_event)
+b["buffer"].open_ring_buffer(&print_event)
 
 loop do
   begin
