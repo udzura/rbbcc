@@ -5,6 +5,61 @@ require 'rbbcc/disp_helper'
 require 'rbbcc/cpu_helper'
 
 module RbBCC
+  module EventTypeSupported
+    def get_event_class
+      ct_mapping = {
+        's8': 'char',
+        'u8': 'unsined char',
+        's8 *': 'char *',
+        's16': 'short',
+        'u16': 'unsigned short',
+        's32': 'int',
+        'u32': 'unsigned int',
+        's64': 'long long',
+        'u64': 'unsigned long long'
+      }
+
+      array_type = /(.+) \[([0-9]+)\]$/
+      fields = []
+      num_fields = Clib.bpf_perf_event_fields(self.bpf.module, @name)
+      num_fields.times do |i|
+        field = Clib.__extract_char(Clib.bpf_perf_event_field(self.bpf.module, @name, i))
+        field_name, field_type = *field.split('#')
+        if field_type =~ /enum .*/
+          field_type = "int" #it is indeed enum...
+        end
+        if _field_type = ct_mapping[field_type.to_sym]
+          field_type = _field_type
+        end
+
+        m = array_type.match(field_type)
+        if m
+          field_type = "#{m[1]}[#{m[2]}]"
+          fields << [field_type, field_name].join(" ")
+        else
+          fields << [field_type, field_name].join(" ")
+        end
+      end
+      klass = Fiddle::Importer.struct(fields)
+      char_ps = fields.select {|f| f =~ /^char\[(\d+)\] ([_a-zA-Z0-9]+)/ }
+      unless char_ps.empty?
+        m = Module.new do
+          char_ps.each do |char_p|
+            md = /^char\[(\d+)\] ([_a-zA-Z0-9]+)/.match(char_p)
+            define_method md[2] do
+              # Split the char[] in the place where the first \0 appears
+              raw = super()
+              raw = raw[0...raw.index(0)] if raw.index(0)
+              raw.pack("c*")
+            end
+          end
+        end
+        klass.prepend m
+      end
+      klass
+    end
+  end
+  
   module Table
     BPF_MAP_TYPE_HASH = 1
     BPF_MAP_TYPE_ARRAY = 2
@@ -24,6 +79,17 @@ module RbBCC
     BPF_MAP_TYPE_CPUMAP = 16
     BPF_MAP_TYPE_XSKMAP = 17
     BPF_MAP_TYPE_SOCKHASH = 18
+    BPF_MAP_TYPE_CGROUP_STORAGE = 19
+    BPF_MAP_TYPE_REUSEPORT_SOCKARRAY = 20
+    BPF_MAP_TYPE_PERCPU_CGROUP_STORAGE = 21
+    BPF_MAP_TYPE_QUEUE = 22
+    BPF_MAP_TYPE_STACK = 23
+    BPF_MAP_TYPE_SK_STORAGE = 24
+    BPF_MAP_TYPE_DEVMAP_HASH = 25
+    BPF_MAP_TYPE_STRUCT_OPS = 26
+    BPF_MAP_TYPE_RINGBUF = 27
+    BPF_MAP_TYPE_INODE_STORAGE = 28
+    BPF_MAP_TYPE_TASK_STORAGE = 29
 
     def self.new(bpf, map_id, map_fd, keytype, leaftype, name, **kwargs)
       ttype = Clib.bpf_table_type_id(bpf.module, map_id)
@@ -34,6 +100,8 @@ module RbBCC
         ArrayTable.new(bpf, map_id, map_fd, keytype, leaftype)
       when BPF_MAP_TYPE_PERF_EVENT_ARRAY
         PerfEventArray.new(bpf, map_id, map_fd, keytype, leaftype, name: name)
+      when BPF_MAP_TYPE_RINGBUF
+        RingBuf.new(bpf, map_id, map_fd, keytype, leaftype, name)
       when BPF_MAP_TYPE_STACK_TRACE
         StackTrace.new(bpf, map_id, map_fd, keytype, leaftype)
       else
@@ -260,6 +328,8 @@ module RbBCC
   end
 
   class PerfEventArray < TableBase
+    include EventTypeSupported
+    
     def initialize(bpf, map_id, map_fd, keytype, leaftype, name: nil)
       super
       @open_key_fds = {}
@@ -283,60 +353,6 @@ module RbBCC
       get_online_cpus.each do |i|
         _open_perf_buffer(i, callback, page_cnt, lost_cb)
       end
-    end
-
-    private
-    def get_event_class
-      ct_mapping = {
-        's8': 'char',
-        'u8': 'unsined char',
-        's8 *': 'char *',
-        's16': 'short',
-        'u16': 'unsigned short',
-        's32': 'int',
-        'u32': 'unsigned int',
-        's64': 'long long',
-        'u64': 'unsigned long long'
-      }
-
-      array_type = /(.+) \[([0-9]+)\]$/
-      fields = []
-      num_fields = Clib.bpf_perf_event_fields(self.bpf.module, @name)
-      num_fields.times do |i|
-        field = Clib.__extract_char(Clib.bpf_perf_event_field(self.bpf.module, @name, i))
-        field_name, field_type = *field.split('#')
-        if field_type =~ /enum .*/
-          field_type = "int" #it is indeed enum...
-        end
-        if _field_type = ct_mapping[field_type.to_sym]
-          field_type = _field_type
-        end
-
-        m = array_type.match(field_type)
-        if m
-          field_type = "#{m[1]}[#{m[2]}]"
-          fields << [field_type, field_name].join(" ")
-        else
-          fields << [field_type, field_name].join(" ")
-        end
-      end
-      klass = Fiddle::Importer.struct(fields)
-      char_ps = fields.select {|f| f =~ /^char\[(\d+)\] ([_a-zA-Z0-9]+)/ }
-      unless char_ps.empty?
-        m = Module.new do
-          char_ps.each do |char_p|
-            md = /^char\[(\d+)\] ([_a-zA-Z0-9]+)/.match(char_p)
-            define_method md[2] do
-              # Split the char[] in the place where the first \0 appears
-              raw = super()
-              raw = raw[0...raw.index(0)] if raw.index(0)
-              raw.pack("c*")
-            end
-          end
-        end
-        klass.prepend m
-      end
-      klass
     end
 
     def _open_perf_buffer(cpu, callback, page_cnt, lost_cb)
@@ -379,6 +395,51 @@ module RbBCC
       self.bpf.perf_buffers[[object_id, cpu]] = reader
       @_cbs[cpu] = [fn, lost_fn]
       @_open_key_fds[cpu] = -1
+    end
+  end
+
+  class RingBuf < TableBase
+    include EventTypeSupported
+    
+    def initialize(bpf, map_id, map_fd, keytype, leaftype, name=nil)
+      super
+      @_ringbuf = nil
+      @_ringbuf_manager = nil
+      @event_class = nil
+    end
+
+    def event(data)
+      @event_class ||= get_event_class
+      ev = @event_class.malloc
+      Fiddle::Pointer.new(ev.to_ptr)[0, @event_class.size] = data[0, @event_class.size]
+      return ev
+    end
+
+    def open_ring_buffer(callback, ctx=nil)
+      # bind("int ring_buffer_sample_fn(void *, void *, int)")
+      fn = Fiddle::Closure::BlockCaller.new(
+        Fiddle::TYPE_INT,
+        [Fiddle::TYPE_VOIDP, Fiddle::TYPE_VOIDP, Fiddle::TYPE_INT]
+      ) do |_dummy, data, size|
+        begin
+          _ret = callback.call(ctx, data, size)
+          ret = _ret.to_i
+          return ret
+        rescue NoMethodError
+          # Callback for ringbufs should _always_ return an integer.
+          # simply fall back to returning 0 when failed
+          return 0
+        rescue => e
+          if Fiddle.last_error == 32 # EPIPE
+            exit
+          else
+            raise e
+          end
+        end
+      end
+
+      @bpf._open_ring_buffer(@map_fd, fn. ctx)
+      nil
     end
   end
 
