@@ -12,9 +12,12 @@ b = BCC.new(text: %|
 #include <linux/utsname.h>
 
 TRACEPOINT_PROBE(syscalls, sys_enter_newuname) {
-    // args is from /sys/kernel/debug/tracing/events/random/urandom_read/format
-    char *release = args->name->release;
-    if release[0] == '5' || release[0] == '6' {
+    // args is from
+    // /sys/kernel/debug/tracing/events/syscalls/sys_enter_newuname/format
+    char release[16];
+    bpf_probe_read_user_str(release, 16, args->name->release);
+    // avoid broken data
+    if (release[0] == '5' || release[0] == '6') {
         bpf_trace_printk("%s\\n", args->name->release);
     }
     return 0;
@@ -22,7 +25,7 @@ TRACEPOINT_PROBE(syscalls, sys_enter_newuname) {
 |)
 
 # header
-printf("%-18s %-16s %-6s %s\n", "TIME(s)", "COMM", "PID", "UNAME")
+printf("%-18s %-16s %-6s %s\n", "TIME(s)", "COMM", "PID", "RELEASE")
 
 # format output
 loop do
