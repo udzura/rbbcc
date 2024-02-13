@@ -11,6 +11,8 @@
 # Copyright 2016 Netflix, Inc.
 # Licensed under the Apache License, Version 2.0 (the "License")
 
+# FIXME: random/urandom_read is removed from newer kernel!!
+
 require 'rbbcc'
 include RbBCC
 
