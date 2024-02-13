@@ -262,6 +262,7 @@ module RbBCC
       @funcs = {}
       @tables = {}
       @perf_buffers = {}
+      @_ringbuf_manager = nil
 
       unless @module
         raise "BPF module not created"
@@ -555,6 +556,21 @@ module RbBCC
       Clib.perf_reader_poll(readers.size, pack, timeout)
     end
 
+    def _open_ring_buffer(map_fd, fn, ctx)
+      buf = Clib.bpf_new_ringbuf(map_fd, fn, ctx)
+      if !buf
+        raise "Could not open ring buffer"
+      end
+      @_ringbuf_manager ||= buf
+    end
+    
+    def ring_buffer_poll(timeout=-1)
+      unless @_ringbuf_manager
+        raise "No ring buffers to poll"
+      end
+      Clib.bpf_poll_ringbuf(@_ringbuf_manager, timeout)
+    end
+    
     def ksymname(name)
       SymbolCache.resolve_global(name)
     end

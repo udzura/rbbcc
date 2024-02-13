@@ -133,6 +133,11 @@ module RbBCC
     extern 'size_t bpf_perf_event_fields(void *program, const char *event)'
     extern 'char * bpf_perf_event_field(void *program, const char *event, size_t i)'
 
+    # typedef int (*ring_buffer_sample_fn)(void *ctx, void *data, size_t size);
+    extern 'void * bpf_new_ringbuf(int map_fd, void *sample_cb, void *ctx)'
+    extern 'int bpf_poll_ringbuf(void *rb, int timeout_ms)'
+    extern 'void bpf_free_ringbuf(void *rb)'
+
     extern 'void * bcc_usdt_new_frompid(int, char *)'
     extern 'void * bcc_usdt_new_frompath(char *path)'
     extern 'int bcc_usdt_enable_probe(void *, char *, char *)'
