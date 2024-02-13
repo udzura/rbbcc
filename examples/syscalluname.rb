@@ -11,9 +11,12 @@ include RbBCC
 b = BCC.new(text: %|
 #include <linux/utsname.h>
 
-TRACEPOINT_PROBE(syscalls, sys_exit_newuname) {
+TRACEPOINT_PROBE(syscalls, sys_enter_newuname) {
     // args is from /sys/kernel/debug/tracing/events/random/urandom_read/format
-    bpf_trace_printk("%s\\n", args->name->release);
+    char *release = args->name->release;
+    if release[0] == '5' || release[0] == '6' {
+        bpf_trace_printk("%s\\n", args->name->release);
+    }
     return 0;
 }
 |)
