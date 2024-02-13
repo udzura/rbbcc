@@ -8,7 +8,7 @@
 require 'rbbcc'
 include RbBCC
 
-b = BCC.new(text: %|
+b = BCC.new(text: %[
 #include <linux/utsname.h>
 
 TRACEPOINT_PROBE(syscalls, sys_enter_newuname) {
@@ -18,11 +18,11 @@ TRACEPOINT_PROBE(syscalls, sys_enter_newuname) {
     bpf_probe_read_user_str(release, 16, args->name->release);
     // avoid broken data
     if (release[0] == '5' || release[0] == '6') {
-        bpf_trace_printk("%s\\n", args->name->release);
+        bpf_trace_printk("%s\\n", release);
     }
     return 0;
 }
-|)
+])
 
 # header
 printf("%-18s %-16s %-6s %s\n", "TIME(s)", "COMM", "PID", "RELEASE")
