@@ -231,34 +231,31 @@ module RbBCC
         hdr_file = BCC._find_file(hdr_file)
       end
 
-      if src_file && src_file.end_with?(".b")
-        @module = Clib.bpf_module_create_b(src_file, hdr_file, debug, dev_name)
-      else
-        if src_file
-          text = File.read(src_file)
-        end
-
-        @usdt_contexts = usdt_contexts
-        if code = gen_args_from_usdt
-          text = code + text
-        end
-
-
-        cflags_safe = if cflags.empty? or !cflags[-1].nil?
-                        cflags + [nil]
-                      else
-                        cflags
-                      end
-
-        @module = Clib.do_bpf_module_create_c_from_string(
-          text,
-          debug,
-          cflags_safe.pack("p*"),
-          cflags_safe.size,
-          allow_rlimit,
-          dev_name
-        )
+      if src_file
+        text = File.read(src_file)
       end
+
+      @usdt_contexts = usdt_contexts
+      if code = gen_args_from_usdt
+        text = code + text
+      end
+
+
+      cflags_safe = if cflags.empty? or !cflags[-1].nil?
+                      cflags + [nil]
+                    else
+                      cflags
+                    end
+
+      @module = Clib.do_bpf_module_create_c_from_string(
+        text,
+        debug,
+        cflags_safe.pack("p*"),
+        cflags_safe.size,
+        allow_rlimit,
+        dev_name
+      )
+
       @funcs = {}
       @tables = {}
       @perf_buffers = {}
