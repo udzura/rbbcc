@@ -56,3 +56,13 @@ jobs:
         run: |
           docker push \
             ghcr.io/udzura/rbbcc-ci-images:libbcc-${{ inputs.bcc_version }}-ruby-${{ inputs.ruby_version }}
+
+      - name: Build Summary
+        run: |
+          echo "### Build Completed 🚀" >> $GITHUB_STEP_SUMMARY
+          echo "- **BCC Version**: ${{ inputs.bcc_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Ruby Version**: ${{ inputs.ruby_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Pushed**: ${{ inputs.push_image }}" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ inputs.push_image }}" = "true" ]; then
+            echo "- **Image URL**: \`ghcr.io/udzura/rbbcc-ci-images:libbcc-${{ inputs.bcc_version }}-ruby-${{ inputs.ruby_version }}\`" >> $GITHUB_STEP_SUMMARY
+          fi
