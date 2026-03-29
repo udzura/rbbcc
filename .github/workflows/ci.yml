@@ -12,7 +12,7 @@ jobs:
         libbcc_version: [0.17.0, 0.16.0, 0.12.0]
         ruby_version: [2.7.2, 3.0.0]
 
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
     - name: Login to ghcr.io
