@@ -22,7 +22,6 @@ jobs:
         uses: actions-cool/check-user-permission@v2
         with:
           require: 'write'
-          check-only: false
 
       - name: Add reaction
         uses: actions/github-script@v7
