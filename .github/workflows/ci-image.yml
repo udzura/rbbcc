@@ -1,15 +1,23 @@
 name: Build and Push CI Image
 
 on:
-  issue_comment:
-    types: [created]
+  workflow_dispatch:
+    inputs:
+      bcc_version:
+        description: 'BCC Version (e.g., 0.35.0)'
+        required: true
+        default: '0.35.0'
+      ruby_version:
+        description: 'Ruby Version (e.g., 4.0.2)'
+        required: true
+        default: '4.0.2'
+      push_image:
+        description: 'Push image to registry?'
+        type: boolean
+        default: true
 
 jobs:
   build:
-    # PRへのコメントかつ、内容が "/build" である場合のみ実行
-    if: |
-      github.event.issue.pull_request &&
-      github.event.comment.body == '/build'
     runs-on: ubuntu-latest
     
     permissions:
@@ -23,22 +31,6 @@ jobs:
         with:
           require: 'write'
 
-      - name: Add reaction
-        uses: actions/github-script@v7
-        with:
-          script: |
-            github.rest.reactions.createForIssueComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              comment_id: context.payload.comment.id,
-              content: 'rocket'
-            })
-
-      - name: Checkout PR branch
-        uses: actions/checkout@v4
-        with:
-          ref: refs/pull/${{ github.event.issue.number }}/head
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -49,19 +41,18 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.DOCKERHUB_WRITE_TOKEN }}
 
-      - name: Build and push
+      - name: Build
         run: |
-          make ci-base-all && \
-          make push-base-all
+          docker buildx build \
+            --platform linux/amd64/v3 \
+            --build-arg BCC_VERSION=${{ inputs.bcc_version }} \
+            --build-arg RUBY_VERSION=${{ inputs.ruby_version }} \
+            -t ghcr.io/udzura/rbbcc-ci-images:libbcc-${{ inputs.bcc_version }}-ruby-${{ inputs.ruby_version }} \
+            --file Dockerfile.ci \
+            --load .
 
-      - name: Post success comment
-        if: success()
-        uses: actions/github-script@v7
-        with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: '✅ pushed CI images successfully!'
-            })
+      - name: Push
+        if: ${{ inputs.push_image }}
+        run: |
+          docker push \
+            ghcr.io/udzura/rbbcc-ci-images:libbcc-${{ inputs.bcc_version }}-ruby-${{ inputs.ruby_version }}
