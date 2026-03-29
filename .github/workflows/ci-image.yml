@@ -22,8 +22,7 @@ jobs:
     
     permissions:
       contents: read
-      pull-requests: write
-      id-token: write
+      packages: write
 
     steps:
       - name: Check user permission
@@ -41,7 +40,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.DOCKERHUB_WRITE_TOKEN }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build
         run: |
