@@ -9,7 +9,7 @@ jobs:
   test:
     strategy:
       matrix:
-        libbcc_version: [0.29.0]
+        libbcc_version: [0.29.0, 0.31.0, 0.35.0]
         ruby_version: [4.0.2]
 
     runs-on: ubuntu-latest
@@ -36,5 +36,5 @@ jobs:
                    -v /usr/include/linux:/usr/include/linux:ro \
                    rbbcc-ci-${{ matrix.libbcc_version }}-${{ matrix.ruby_version }} \
                    /bin/bash -c \
-                   'cd /rbbcc && bundle install && bundle exec rake test'"
+                   'cd /rbbcc && git config --global --add safe.directory /rbbcc && bundle install && bundle exec rake test'"
     
