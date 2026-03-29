@@ -46,7 +46,7 @@ jobs:
       - name: Build
         run: |
           docker buildx build \
-            --platform linux/amd64/v3 \
+            --platform linux/amd64 \
             --build-arg BCC_VERSION=${{ inputs.bcc_version }} \
             --build-arg RUBY_VERSION=${{ inputs.ruby_version }} \
             -t ghcr.io/udzura/rbbcc-ci-images:libbcc-${{ inputs.bcc_version }}-ruby-${{ inputs.ruby_version }} \
