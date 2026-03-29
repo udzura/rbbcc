@@ -22,15 +22,28 @@ RUN apt-get update && apt-get install -y \
     gnupg \
     util-linux \
     bison \
-    binutils-dev \
     cmake \
     flex \
     g++ \
+    make \
     git \
     kmod \
     wget \
-    libelf-dev \
+    sudo \
+    iproute2 \
+    iputils-ping \
+    bridge-utils \
+    libncurses-dev \
+    libssl-dev \
+    libreadline-dev \
     zlib1g-dev \
+    libyaml-dev \
+    libffi-dev \
+    libdebuginfod1 \
+    libelf1 \
+    liblzma5 \
+    binutils-dev \
+    libelf-dev \
     libiberty-dev \
     libbfd-dev \
     libedit-dev \
@@ -48,37 +61,27 @@ RUN apt-get update && apt-get install -y \
     llvm-${LLVM_VERSION}-runtime \
     libllvm${LLVM_VERSION} \
     libpolly-${LLVM_VERSION}-dev \
-    systemtap-sdt-dev \
-    sudo \
-    iproute2 \
-    iputils-ping \
-    bridge-utils \
-    libncurses-dev && \
-    wget -O ruby-install-0.9.3.tar.gz \
-    https://github.com/postmodern/ruby-install/archive/v0.9.3.tar.gz && \
+    systemtap-sdt-dev
+
+RUN wget -O ruby-install-0.9.3.tar.gz https://github.com/postmodern/ruby-install/archive/v0.9.3.tar.gz && \
     tar -xzvf ruby-install-0.9.3.tar.gz && \
-    cd ruby-install-0.9.3/ && \
-    make install && \
-    ruby-install --system $RUBY_EXTRA_OPTS ruby $RUBY_VERSION && \
-    mkdir /tmp/bcc/ && \
-    cd /tmp/bcc/ && \
-    git config --global user.name 'udzura' && \
-    git config --global user.email 'udzura@udzura.jp' && \
-    wget -O bcc-$BCC_VERSION.tar.gz \
-    https://github.com/iovisor/bcc/releases/download/v$BCC_VERSION/bcc-src-with-submodule.tar.gz && \
+    cd ruby-install-0.9.3/ && make install && \
+    ruby-install --system ruby $RUBY_VERSION && \
+    cd / && rm -rf ruby-install-0.9.3*
+
+RUN git config --global user.name 'udzura' && git config --global user.email 'udzura@udzura.jp' && \
+    wget -O bcc-$BCC_VERSION.tar.gz https://github.com/iovisor/bcc/releases/download/v$BCC_VERSION/bcc-src-with-submodule.tar.gz && \
     tar -xzvf bcc-$BCC_VERSION.tar.gz && \
     cd bcc/ && \
-    git config --global --add safe.directory /tmp/bcc/bcc && \
+    git config --global --add safe.directory /bcc && \
     git init . && git add . && git commit -m 'Dummy' && git tag v$BCC_VERSION && \
     mkdir build && cd build/ && \
-    cmake $BCC_EXTRA_OPTS -DCMAKE_BUILD_TYPE=Release .. && \
-    cd src/cc && \
-    make -j8 && make install && \
-    cd ../.. && \
-    apt-get remove --purge -y \
+    cmake -DCMAKE_BUILD_TYPE=Release .. && \
+    cd src/cc && make -j$(nproc) && make install && \
+    cd / && rm -rf bcc/ bcc-$BCC_VERSION.tar.gz
+
+RUN apt-get remove --purge -y \
     binutils-dev \
-    libelf-dev \
-    zlib1g-dev \
     libiberty-dev \
     libbfd-dev \
     libedit-dev \
@@ -88,15 +91,10 @@ RUN apt-get update && apt-get install -y \
     clang-${LLVM_VERSION} \
     libclang-${LLVM_VERSION}-dev \
     libclang-common-${LLVM_VERSION}-dev \
-    libclang1-${LLVM_VERSION} \
-    llvm-${LLVM_VERSION} \
     llvm-${LLVM_VERSION}-dev \
-    llvm-${LLVM_VERSION}-runtime \
     libllvm${LLVM_VERSION} \
     libpolly-${LLVM_VERSION}-dev \
-    systemtap-sdt-dev \
-    libncurses-dev && \
+    systemtap-sdt-dev && \
     apt autoremove -y && \
     apt-get clean -y && \
-    rm -rf /var/lib/apt/lists/* && \
-    cd / && rm -rf ruby-install-0.9.3/ ruby-install-0.9.3.tar.gz bcc-$BCC_VERSION.tar.gz bcc/
+    rm -rf /var/lib/apt/lists/*
