@@ -24,13 +24,27 @@ module RbBCC
       @@libbcc_version >= Gem::Version.new(ver)
     end
 
-    extend Fiddle::Importer
-    targets = %w(0.29.1 0.26.0 0.22.0 0.18.0 0.17.0 0.16.0 0.15.0 0.14.0 0.13.0 0.12.0 0.11.0 0.10.0)
-    if default_load = ENV['LIBBCC_VERSION']
-      targets.unshift(default_load)
-      targets.uniq!
+    def self.system_libbcc_versions
+      paths = ['/usr/lib', '/usr/lib64', '/usr/local/lib', '/usr/lib/x86_64-linux-gnu'].freeze
+      candidates = paths.flat_map do |path|
+        Dir.glob("#{path}/libbcc.so.[0-9]*")
+      end
+
+      candidates.map do |path|
+        path.match(/libbcc\.so\.([\d.]+)/)&.captures&.first
+      end.compact.uniq.sort_by { |v| Gem::Version.new(v) }.reverse
+    rescue
+      []
     end
 
+    extend Fiddle::Importer
+
+    targets = if (env_ver = ENV['LIBBCC_VERSION'])
+                [env_ver]
+              else
+                self.system_libbcc_versions
+              end
+    raise LoadError, "no target libbcc to load" if targets.empty?
     targets.each do |to_load|
       begin
         dlload "libbcc.so.#{to_load}"
