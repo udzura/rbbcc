@@ -25,7 +25,7 @@ module RbBCC
     end
 
     def self.system_libbcc_versions
-      paths = ['/usr/lib', '/usr/lib64', '/usr/local/lib', '/usr/lib/x86_64-linux-gnu'].freeze
+      paths = ['/lib', '/usr/lib', '/usr/lib64', '/usr/local/lib', '/usr/lib/x86_64-linux-gnu', '/usr/lib/aarch64-linux-gnu'].freeze
       candidates = paths.flat_map do |path|
         Dir.glob("#{path}/libbcc.so.[0-9]*")
       end
