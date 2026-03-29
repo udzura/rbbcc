@@ -8,11 +8,11 @@ gem "rake", "~> 13.0"
 gem "pry", "~> 0.12"
 gem "minitest", ">= 5"
 
-group :omnibus_package do
-  gem "appbundler"
-  gem "specific_install"
-end
+#group :omnibus_package do
+#  gem "appbundler"
+#  gem "specific_install"
+#end
 
-group :plugin_dev do
-  gem "rbbcc-hello", git: "https://github.com/udzura/rbbcc-hello.git"
-end
+#group :plugin_dev do
+#  gem "rbbcc-hello", git: "https://github.com/udzura/rbbcc-hello.git"
+#end
