@@ -1,9 +1,9 @@
 name: Tests
 on:
   push:
-    branches: [ default ]
+    branches: [ master ]
   pull_request:
-    branches: [ default ]
+    branches: [ master ]
 
 jobs:
   test:
