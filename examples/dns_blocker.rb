@@ -82,14 +82,15 @@ end
 
 def attach_tc(interface)
   system(
-    "sudo `tc filter add dev #{interface} egress" +
+    "sudo tc filter add dev #{interface} egress" +
     " bpf pinned #{PIN_PATH} da",
     exception: true
   )
 end
 
 def cleanup_tc(interface)
-  system("sudo tc qdisc del dev #{interface} clsact", exception: true)
+  # Run idempotently
+  system("sudo tc qdisc del dev #{interface} clsact 2>/dev/null")
   File.unlink(PIN_PATH) if File.exist?(PIN_PATH)
 end
 
