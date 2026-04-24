@@ -192,6 +192,7 @@ module RbBCC
 
     extern 'int bpf_open_raw_sock(const char *name)'
     extern 'int bpf_attach_socket(int sockfd, int progfd)'
+    extern 'int bpf_obj_pin(int fd, const char *pathname)'
   end
 end
 
