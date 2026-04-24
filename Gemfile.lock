@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    rbbcc (0.10.0)
+    rbbcc (0.11.0.pre)
       fiddle
 
 GEM
@@ -23,6 +23,7 @@ GEM
 PLATFORMS
   aarch64-linux
   arm64-darwin-21
+  arm64-darwin-24
   arm64-darwin-25
 
 DEPENDENCIES

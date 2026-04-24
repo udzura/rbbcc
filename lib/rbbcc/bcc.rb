@@ -180,7 +180,7 @@ module RbBCC
         end
         orig_name = c.inspect
         c.define_singleton_method :inspect do
-          orig_name.sub /(?=>$)/, " original_desc=#{desc.inspect}" rescue super
+          orig_name.sub(/(?=>$)/, " original_desc=#{desc.inspect}") rescue super
         end
         c
       end
@@ -217,6 +217,23 @@ module RbBCC
         end
         fn[:sock] = sock
         fn
+      end
+
+      #: (Integer | Hash[Symbol, untyped] fd, String path) -> String
+      def pin!(fd, path)
+        fd = fd[:fd] if fd.is_a?(Hash)
+        unless fd.is_a?(Integer) && fd >= 0
+          raise ArgumentError, "fd must exist and be a non-negative Integer"
+        end
+        unless path.is_a?(String) && !path.empty?
+          raise ArgumentError, "path must be a non-empty String"
+        end
+
+        res = Clib.bpf_obj_pin(fd, path)
+        if res < 0
+          raise SystemCallError.new("Failed to pin BPF object to %s" % path, Fiddle.last_error)
+        end
+        path
       end
     end
 
@@ -279,7 +296,6 @@ module RbBCC
 
     def gen_args_from_usdt
       ptr = Clib.bcc_usdt_genargs(@usdt_contexts.map(&:context).pack('J*'), @usdt_contexts.size)
-      code = ""
       if !ptr || ptr.null?
         return nil
       end
