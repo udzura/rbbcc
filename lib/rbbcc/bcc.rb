@@ -643,6 +643,9 @@ module RbBCC
             tp: tp,
             fn_name: fn[:name]
           )
+        elsif func_name.start_with?("lsm__")
+          # LSM_PROBE programs are attached by libbcc while loading.
+          load_func(func_name, BPF::LSM)
         end
       end
     end
