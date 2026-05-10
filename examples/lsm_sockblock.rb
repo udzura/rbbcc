@@ -129,7 +129,7 @@ begin
 
     mode_str = (event.is_blocked == 1) ? "BLOCK" : "PREVIEW"
     status = (event.is_blocked == 1) ? "REJECTED" : "WARNING"
-    puts "[#{mode_str}] #{status}: PID #{event.pid} (#{event.comm}) tried AF_ALG socket creation."
+    puts "\e[1;31m[#{mode_str}] #{status}: PID #{event.pid} (#{event.comm}) tried AF_ALG socket creation.\e[0m"
   end
 
   loop do
