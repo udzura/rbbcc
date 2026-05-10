@@ -1,3 +1,3 @@
 module RbBCC
-  VERSION = "0.11.0.pre"
+  VERSION = "0.11.0"
 end
