@@ -242,6 +242,7 @@ module RbBCC
       @uprobe_fds = {}
       @tracepoint_fds = {}
       @raw_tracepoint_fds = {}
+      @lsm_fds = {}
 
       if src_file
         src_file = BCC._find_file(src_file)
@@ -433,6 +434,34 @@ module RbBCC
       @tracepoint_fds.delete(tp)
     end
 
+    def attach_lsm(fn_name: "")
+      if @lsm_fds.keys.include?(fn_name)
+        raise "LSM #{fn_name} has been attached"
+      end
+
+      fn = load_func(fn_name, BPF::LSM)
+      fd = Clib.bpf_attach_lsm(fn[:fd])
+      if fd < 0
+        raise SystemCallError.new("Failed to attach LSM #{fn_name}", Fiddle.last_error)
+      end
+      Util.debug "Attach: #{fn_name}"
+      @lsm_fds[fn_name] = fd
+      self
+    end
+
+    def detach_lsm(fn_name)
+      unless @lsm_fds.keys.include?(fn_name)
+        raise "LSM #{fn_name} is not attached"
+      end
+
+      begin
+        File.for_fd(@lsm_fds[fn_name]).close
+      rescue => e
+        warn "Closing fd failed: #{e.inspect}. Ignore and skip"
+      end
+      @lsm_fds.delete(fn_name)
+    end
+
     def detach_kprobe_event(ev_name)
       unless @kprobe_fds.keys.include?(ev_name)
         raise "Event #{ev_name} not registered"
@@ -469,6 +498,10 @@ module RbBCC
 
     def num_open_tracepoints
       @tracepoint_fds.size
+    end
+
+    def num_open_lsms
+      @lsm_fds.size
     end
 
     def tracefile
@@ -526,6 +559,10 @@ module RbBCC
 
       @raw_tracepoint_fds.each do |k, v|
         detach_raw_tracepoint(k)
+      end
+
+      @lsm_fds.each do |k, v|
+        detach_lsm(k)
       end
 
       if @module
@@ -644,8 +681,7 @@ module RbBCC
             fn_name: fn[:name]
           )
         elsif func_name.start_with?("lsm__")
-          # LSM_PROBE programs are attached by libbcc while loading.
-          load_func(func_name, BPF::LSM)
+          attach_lsm(fn_name: func_name)
         end
       end
     end
