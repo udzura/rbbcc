@@ -19,5 +19,8 @@ module RbBCC
     SK_MSG = 16
     RAW_TRACEPOINT = 17
     CGROUP_SOCK_ADDR = 18
+    CGROUP_SOCKOPT = 25
+    TRACING = 26
+    LSM = 29
   end
 end
