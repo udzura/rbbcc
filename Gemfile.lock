@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    rbbcc (0.11.0.pre)
+    rbbcc (0.11.0)
       fiddle
 
 GEM
