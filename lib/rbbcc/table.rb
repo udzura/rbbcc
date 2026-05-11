@@ -115,13 +115,29 @@ module RbBCC
     include CPUHelper
     include Enumerable
 
-    def initialize(bpf, map_id, map_fd, keytype, leaftype, name: nil)
+    class << self
+      def from_pin(path, keytype, leaftype, keysize: nil, leafsize: nil, **kwargs)
+        map_fd = Clib.bpf_obj_get(path)
+        if map_fd < 0
+          raise SystemCallError.new("Could not open pinned map", Fiddle.last_error)
+        end
+
+        new(nil, nil, map_fd, keytype, leaftype,
+            keysize: keysize, leafsize: leafsize, **kwargs)
+      end
+    end
+
+    def initialize(bpf, map_id, map_fd, keytype, leaftype, name: nil, keysize: nil, leafsize: nil)
       @bpf, @map_id, @map_fd, @keysize, @leafsize = \
-                                        bpf, map_id, map_fd, sizeof(keytype), sizeof(leaftype)
+                                        bpf, map_id, map_fd,
+                                        keysize || sizeof(keytype),
+                                        leafsize || sizeof(leaftype)
       @keytype = keytype
       @leaftype = leaftype
-      @ttype = Clib.bpf_table_type_id(self.bpf.module, self.map_id)
-      @flags = Clib.bpf_table_flags_id(self.bpf.module, self.map_id)
+      if @bpf
+        @ttype = Clib.bpf_table_type_id(self.bpf.module, self.map_id)
+        @flags = Clib.bpf_table_flags_id(self.bpf.module, self.map_id)
+      end
       @name = name
     end
     attr_reader :bpf, :map_id, :map_fd, :keysize, :keytype, :leafsize, :leaftype, :ttype, :flags, :name
@@ -300,9 +316,9 @@ module RbBCC
   end
 
   class ArrayTable < TableBase
-    def initialize(bpf, map_id, map_fd, keytype, leaftype, name: nil)
+    def initialize(bpf, map_id, map_fd, keytype, leaftype, name: nil, keysize: nil, leafsize: nil)
       super
-      @max_entries = Clib.bpf_table_max_entries_id(bpf.module, map_id)
+      @max_entries = Clib.bpf_table_max_entries_id(bpf.module, map_id) if bpf
     end
 
     # We now emulate the Array class of Ruby
