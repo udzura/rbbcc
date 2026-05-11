@@ -137,6 +137,13 @@ module RbBCC
       if @bpf
         @ttype = Clib.bpf_table_type_id(self.bpf.module, self.map_id)
         @flags = Clib.bpf_table_flags_id(self.bpf.module, self.map_id)
+      else
+        @ttype = case self
+                 when HashTable
+                   Table::BPF_MAP_TYPE_HASH
+                 when ArrayTable
+                   Table::BPF_MAP_TYPE_ARRAY
+                 end
       end
       @name = name
     end
