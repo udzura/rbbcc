@@ -298,7 +298,7 @@ module RbBCC
         leaf.bcc_value_type = leaftype
         leaf
       when Integer
-        ret = byref(leaf, keysize)
+        ret = byref(leaf, leafsize)
         ret.bcc_value_type = leaftype
         ret
       else
