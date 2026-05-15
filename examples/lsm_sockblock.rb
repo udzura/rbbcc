@@ -20,7 +20,6 @@ require 'rbbcc'
 include RbBCC
 
 PROGRAM = <<~CLANG
-  #include <linux/lsm_hooks.h>
   #include <linux/socket.h>
   #include <uapi/asm-generic/errno-base.h>
 
