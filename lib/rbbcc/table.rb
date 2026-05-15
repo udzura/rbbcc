@@ -308,8 +308,10 @@ module RbBCC
 
     def byref(value, size=sizeof("int"))
       pack_fmt = case size
+                 when sizeof("char"); "c"
                  when sizeof("int") ; "i!"
                  when sizeof("long"); "l!"
+                 when sizeof("long long"); "q!"
                  else               ; "Z*"
                  end
       ptr = Fiddle::Pointer.malloc(size)
