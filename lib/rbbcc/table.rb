@@ -143,6 +143,10 @@ module RbBCC
                    Table::BPF_MAP_TYPE_HASH
                  when ArrayTable
                    Table::BPF_MAP_TYPE_ARRAY
+                 when PerfEventArray
+                   Table::BPF_MAP_TYPE_PERF_EVENT_ARRAY
+                 when RingBuf
+                   Table::BPF_MAP_TYPE_RINGBUF
                  end
       end
       @name = name
