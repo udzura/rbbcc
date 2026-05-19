@@ -106,7 +106,8 @@ def parse_http2_frames(payload)
   total = payload.bytesize
 
   while i + 9 <= total
-    length = payload.byteslice(i, 3).unpack1("N") >> 8
+    length_bytes = payload.byteslice(i, 3).bytes
+    length = (length_bytes[0] << 16) | (length_bytes[1] << 8) | length_bytes[2]
     frame_type = payload.getbyte(i + 3)
     flags = payload.getbyte(i + 4)
     stream_id = payload.byteslice(i + 5, 4).unpack1("N") & 0x7fff_ffff
@@ -172,7 +173,7 @@ def maybe_http1_summary(payload)
   end
 
   nil
-rescue Encoding::UndefinedConversionError, Encoding::InvalidByteSequenceError
+rescue ArgumentError, Encoding::UndefinedConversionError, Encoding::InvalidByteSequenceError
   nil
 end
 
