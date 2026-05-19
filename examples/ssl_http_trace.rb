@@ -147,11 +147,9 @@ def extract_headers_fragment(frame_type, flags, frame_payload)
 end
 
 def decode_pseudo_headers_with_hpack(header_block, decompressor)
-  pairs = decompressor.decode(header_block.dup)
+  pairs = decompressor.decode(header_block.b)
   pseudo = {}
   pairs.each do |k, v|
-    next unless k == ":method" || k == ":path"
-
     pseudo[k] = v
   end
   pseudo
