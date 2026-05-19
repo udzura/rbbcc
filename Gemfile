@@ -7,6 +7,7 @@ gem "bundler", "~> 2.0"
 gem "rake", "~> 13.0"
 gem "pry", "~> 0.12"
 gem "minitest", "~> 5"
+gem "http-2", "~> 1.1"
 
 #group :omnibus_package do
 #  gem "appbundler"
