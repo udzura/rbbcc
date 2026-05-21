@@ -1,5 +1,9 @@
 module RbBCC
-  module BPF
+  class BCC
+  end
+  BPF = BCC # avoid confuse from python port
+
+  class BPF
     # From bpf_prog_type in uapi/linux/bpf.h
     SOCKET_FILTER = 1
     KPROBE = 2
