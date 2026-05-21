@@ -498,6 +498,10 @@ module RbBCC
       @bpf._open_ring_buffer(@map_fd, fn, ctx)
       nil
     end
+
+    def ring_buffer_poll(timeout=-1)
+      @bpf.ring_buffer_poll(timeout)
+    end
   end
 
   class StackTrace < TableBase
