@@ -1,4 +1,6 @@
 module RbBCC
+  class BCC
+  end
   BPF = BCC # avoid confuse from python port
 
   class BPF
