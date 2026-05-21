@@ -431,7 +431,28 @@ module RbBCC
 
   class RingBuf < TableBase
     include EventTypeSupported
-    
+
+    # Make a dynamic BCC program to load the pinned ringbuf map
+    def self.from_pin(path, leaftype, size, name: "events")
+      map_fd = Clib.bpf_obj_get(path)
+      if map_fd < 0
+        raise SystemCallError.new("Could not open pinned map", Fiddle.last_error)
+      end
+      leaftype_typename = case leaftype
+      when /\Astruct\s+(\w+)\s+{/m
+        "struct #{Regexp.last_match(1)}"
+      else
+        leaftype
+      end
+      
+      prog = <<~CLANG
+        #{leaftype}
+        BPF_TABLE_PINNED("ringbuf", u32, #{leaftype_typename}, #{name}, #{size}, "#{path}");
+      CLANG
+      b = BCC.new(text: prog)
+      b[name.to_s]
+    end
+
     def initialize(bpf, map_id, map_fd, keytype, leaftype, name: nil)
       super
       @_ringbuf = nil
