@@ -40,6 +40,8 @@ module RbBCC
           fields << [field_type, field_name].join(" ")
         end
       end
+      return nil if fields.empty?
+
       klass = Fiddle::Importer.struct(fields)
       char_ps = fields.select {|f| f =~ /^char\[(\d+)\] ([_a-zA-Z0-9]+)/ }
       unless char_ps.empty?
@@ -368,7 +370,7 @@ module RbBCC
     end
 
     def event(data)
-      @event_class ||= get_event_class
+      @event_class ||= (get_event_class || self.leaftype)
       ev = @event_class.malloc
       Fiddle::Pointer.new(ev.to_ptr)[0, @event_class.size] = data[0, @event_class.size]
       return ev
@@ -438,7 +440,7 @@ module RbBCC
     end
 
     def event(data)
-      @event_class ||= get_event_class
+      @event_class ||= (get_event_class || self.leaftype)
       ev = @event_class.malloc
       Fiddle::Pointer.new(ev.to_ptr)[0, @event_class.size] = data[0, @event_class.size]
       return ev
