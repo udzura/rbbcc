@@ -607,7 +607,10 @@ module RbBCC
     end
 
     def _open_ring_buffer(map_fd, fn, ctx)
-      buf = Clib.bpf_new_ringbuf(map_fd, fn, ctx)
+      # Avoid GC'ing function pointer
+      @_ring_buffer_fns ||= [] 
+      @_ring_buffer_fns << fn
+      buf = Clib.bpf_new_ringbuf(map_fd, @_ring_buffer_fns[-1], ctx)
       if !buf
         raise "Could not open ring buffer"
       end
