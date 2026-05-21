@@ -282,6 +282,11 @@ module RbBCC
       false # TODO: implement me in the future
     end
 
+    # Just a wrapper to BCC class method
+    def pin!(path)
+      BCC.pin!(self.map_fd, path)
+    end
+
     private
     def normalize_key(key)
       case key
