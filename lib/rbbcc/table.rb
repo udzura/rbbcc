@@ -479,13 +479,14 @@ module RbBCC
         [Fiddle::TYPE_VOIDP, Fiddle::TYPE_VOIDP, Fiddle::TYPE_INT]
       ) do |_dummy, data, size|
         begin
-          _ret = callback.call(ctx, data, size)
-          ret = _ret.to_i
-          ret
-        rescue NoMethodError
-          # Callback for ringbufs should _always_ return an integer.
-          # simply fall back to returning 0 when failed
-          0
+          ret = callback.call(ctx, data, size)
+          if ret.is_a?(Numeric)
+            ret.to_i
+          else
+            # Callback for ringbufs should _always_ return an integer.
+            # simply fall back to returning 0 when failed
+            0
+          end
         rescue => e
           if Fiddle.last_error == 32 # EPIPE
             exit
